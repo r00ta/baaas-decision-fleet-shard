@@ -1,0 +1,20 @@
+apiVersion: operator.baaas/v1alpha1
+kind: DecisionRequest
+metadata:
+  name: kafka-decision
+spec:
+  name: my-kafka-decision
+  customerId: kermit
+  source: https://raw.githubusercontent.com/kiegroup/kogito-examples/stable/dmn-drools-quarkus-metrics/src/main/resources/org/kie/kogito/examples/LoanEligibility.dmn
+  kafka:
+    host: my-kafka-cluster.example.org:443
+    secretName: my-kafka-cluster-credentials
+    inputTopic: theinput
+    outputTopic: theoutput
+  env:
+    - name: one
+      value: two
+    - name: three
+      value: four
+  webhooks:
+    - http://my-server.example.com/callback?foo

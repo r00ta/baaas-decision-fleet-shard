@@ -21,6 +21,8 @@ import java.util.Date;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.sundr.builder.annotations.Buildable;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
@@ -32,6 +34,8 @@ import io.sundr.builder.annotations.Buildable;
         "code",
         "message"
 })
+@ToString
+@EqualsAndHashCode
 public class Webhook {
 
     private String name;

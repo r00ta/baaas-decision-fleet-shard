@@ -34,18 +34,6 @@ public class RemoteResourceClient {
 
     private Client client = ResteasyClientBuilder.newClient();
 
-    public String get(URI path, MediaType mediaType) {
-        Response response = client
-                .target(path)
-                .request(mediaType).get();
-        if (response.getStatus() < Response.Status.BAD_REQUEST.getStatusCode()) {
-            LOGGER.debug("Successfully fetched remote resource from URI: {} and MediaType: {}", path, mediaType);
-            return response.readEntity(String.class);
-        }
-        LOGGER.warn("Unable to retrieve remote resource from URI: {} and MediaType: {}. Received: {}", path, mediaType, response.getStatus());
-        return null;
-    }
-
     public boolean notify(URI path, Webhook event) {
         Response response = client.target(path).request(MediaType.APPLICATION_JSON).post(Entity.json(event));
         if (response.getStatus() < Response.Status.BAD_REQUEST.getStatusCode()) {

@@ -48,7 +48,7 @@ public class DecisionRequestController implements ResourceController<DecisionReq
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DecisionRequestController.class);
     private static final String BAAAS_NS_TEMPLATE = "baaas-%s";
-    private static final String DECISION_REQUEST_ANNOTATION = "org.kie.baaas.decisionrequest";
+    private static final String DECISION_REQUEST_LABEL = "org.kie.baaas.decisionrequest";
 
     @Inject
     KubernetesClient kubernetesClient;
@@ -70,65 +70,82 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                     .withMessage(validationError)
                     .withAdmission(AdmissionStatus.REJECTED)
                     .build());
-            return UpdateControl.updateCustomResource(request);
+            return UpdateControl.updateStatusSubResource(request);
         }
-        return createOrUpdateDecision(request, targetNamespace);
+        try {
+            Decision decision = createOrUpdateDecision(request, targetNamespace);
+            return updateSuccessRequestStatus(request, decision);
+        } catch (KubernetesClientException e) {
+            request.setStatus(new DecisionRequestStatusBuilder()
+                    .withMessage(e.getMessage())
+                    .withAdmission(AdmissionStatus.REJECTED)
+                    .build());
+            return UpdateControl.updateStatusSubResource(request);
+        }
     }
 
+    //TODO: Fix - Validator cannot discover the annotated classes
     private String validateSpec(DecisionSpec spec, String namespace) {
+        //TODO: Remove once validator is fixed
+        if (spec.getCustomerId() == null || spec.getCustomerId().isBlank()) {
+            return "Invalid spec: customerId must not be blank";
+        }
+        // End
+        Set<ConstraintViolation<DecisionSpec>> violations = validator.validate(spec);
+        if (!violations.isEmpty()) {
+            return "Invalid spec: " +
+                    violations.stream()
+                            .map(v -> v.getPropertyPath() + " " + v.getMessage())
+                            .collect(Collectors.joining(","));
+        }
         if (!KubernetesResourceUtil.isValidName(namespace)) {
             return "Invalid target namespace: " + namespace;
         }
-        Set<ConstraintViolation<DecisionSpec>> violations = validator.validate(spec);
-        if (violations.isEmpty()) {
-            return null;
-        }
-        return "Invalid spec: " +
-                violations.stream()
-                        .map(v -> v.getPropertyPath() + " " + v.getMessage())
-                        .collect(Collectors.joining(","));
+        return null;
     }
 
     private String getTargetNamespace(DecisionRequest decision) {
         return String.format(BAAAS_NS_TEMPLATE, decision.getSpec().getCustomerId());
     }
 
-    private UpdateControl<DecisionRequest> createOrUpdateDecision(DecisionRequest request, String namespace) {
+    private Decision createOrUpdateDecision(DecisionRequest request, String namespace) {
         Namespace targetNs = kubernetesClient.namespaces().withName(namespace).get();
-        try {
-            if (targetNs == null) {
-                kubernetesClient.namespaces()
-                        .create(new NamespaceBuilder().withNewMetadata().withName(namespace).endMetadata().build());
-            }
-            Decision decision = new DecisionBuilder()
-                    .withMetadata(new ObjectMetaBuilder()
-                            .withName(request.getMetadata().getName())
-                            .withNamespace(namespace)
-                            .addToAnnotations(DECISION_REQUEST_ANNOTATION, request.getMetadata().getUid())
-                            .build())
-                    .withSpec(request.getSpec())
-                    .build();
-            Decision current = kubernetesClient.customResources(Decision.class).inNamespace(namespace).withName(request.getMetadata().getName()).get();
-            if (current == null || decision.getSpec().needsUpdate(current.getSpec())) {
-                kubernetesClient.customResources(Decision.class)
-                        .inNamespace(namespace)
-                        .withName(decision.getMetadata().getName())
-                        .createOrReplace(decision);
-            }
-        } catch (KubernetesClientException e) {
-            request.setStatus(new DecisionRequestStatusBuilder()
-                    .withAdmission(AdmissionStatus.REJECTED)
-                    .withMessage(e.getMessage())
-                    .build());
-            return UpdateControl.updateCustomResource(request);
+        if (targetNs == null) {
+            kubernetesClient.namespaces()
+                    .create(new NamespaceBuilder().withNewMetadata().withName(namespace).endMetadata().build());
         }
-        if (request.getStatus() == null || AdmissionStatus.REJECTED.equals(request.getStatus().getAdmission())) {
+        Decision expected = new DecisionBuilder()
+                .withMetadata(new ObjectMetaBuilder()
+                        .withName(request.getMetadata().getName())
+                        .withNamespace(namespace)
+                        .addToLabels(DECISION_REQUEST_LABEL, request.getMetadata().getUid())
+                        .build())
+                .withSpec(request.getSpec())
+                .build();
+        Decision current = kubernetesClient.customResources(Decision.class).inNamespace(namespace).withName(request.getMetadata().getName()).get();
+        if (current != null && expected.getSpec().equals(current.getSpec())) {
+            return null;
+        }
+        kubernetesClient.customResources(Decision.class)
+                .inNamespace(namespace)
+                .withName(expected.getMetadata().getName())
+                .createOrReplace(expected);
+        return expected;
+    }
+
+    private UpdateControl<DecisionRequest> updateSuccessRequestStatus(DecisionRequest request, Decision decision) {
+        if(decision == null) {
+            return UpdateControl.noUpdate();
+        }
+        if (request.getStatus() == null || (AdmissionStatus.SUCCESS.equals(request.getStatus().getAdmission()) &&
+                decision.getMetadata().getName().equals(request.getStatus().getDecisionName()) &&
+                decision.getMetadata().getNamespace().equals(request.getStatus().getDecisionNamespace()))) {
             request.setStatus(new DecisionRequestStatusBuilder()
                     .withAdmission(AdmissionStatus.SUCCESS)
-                    .withDecisionName(request.getMetadata().getName())
-                    .withDecisionNamespace(namespace)
+                    .withDecisionName(decision.getMetadata().getName())
+                    .withDecisionNamespace(decision.getMetadata().getNamespace())
                     .build());
-            return UpdateControl.updateCustomResource(request);
+            return UpdateControl.updateStatusSubResource(request);
         }
         return UpdateControl.noUpdate();
     }

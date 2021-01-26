@@ -1,0 +1,39 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: decisionrevisions.operator.baaas
+spec:
+  group: operator.baaas
+  names:
+    kind: DecisionRevision
+    listKind: DecisionRevisionList
+    plural: decisionrevisions
+    singular: decisionrevision
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+    - name: Phase
+      type: string
+      description: Decision revision deployment phase
+      JSONPath: .status.phase
+    - name: Decision
+      type: string
+      description: Decision this revision belongs to
+      JSONPath: .spec.decision
+    - name: Pipeline Run
+      type: string
+      description: PipelineRun name building the image for this revision
+      JSONPath: .status.pipelineRun
+    - name: Image Ref
+      type: string
+      description: Image reference result from the PipelineRun build
+      JSONPath: .status.imageRef
+    - name: Kogito SVC
+      type: string
+      description: Kogito Service managing the deployment of the decision
+      JSONPath: .status.kogitoSvc

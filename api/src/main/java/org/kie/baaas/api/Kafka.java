@@ -20,6 +20,8 @@ import javax.validation.constraints.NotBlank;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.sundr.builder.annotations.Buildable;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
@@ -29,6 +31,8 @@ import io.sundr.builder.annotations.Buildable;
         "inputTopic",
         "outputTopic"
 })
+@ToString
+@EqualsAndHashCode
 public class Kafka {
 
     @NotBlank
@@ -70,24 +74,5 @@ public class Kafka {
 
     public void setOutputTopic(String outputTopic) {
         this.outputTopic = outputTopic;
-    }
-
-    public boolean needsUpdate(Kafka other) {
-        if (other == null) {
-            return true;
-        }
-        if (!this.host.equals(other.host)) {
-            return true;
-        }
-        if (!this.secretName.equals(other.secretName)) {
-            return true;
-        }
-        if (!this.inputTopic.equals(other.inputTopic)) {
-            return true;
-        }
-        if (!this.outputTopic.equals(other.outputTopic)) {
-            return true;
-        }
-        return false;
     }
 }

@@ -14,3 +14,10 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
+  subresources:
+    status: {}
+  additionalPrinterColumns:
+    - name: Revision
+      type: integer
+      description: Current decision revision
+      JSONPath: .status.revisionId

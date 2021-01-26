@@ -16,57 +16,61 @@
 package org.kie.baaas.api;
 
 import java.net.URI;
+import java.util.Collection;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({
-        "endpoint",
-        "revisionId",
-        "revisionName"
-})
 @RegisterForReflection
 @Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
 @ToString
 @EqualsAndHashCode
-public class DecisionStatus {
+public abstract class AbstractDecisionSpec {
 
-    private URI endpoint;
+    @NotNull
+    private URI source;
+    @Valid
+    private Kafka kafka;
+    private Collection<EnvVar> env;
+    private Collection<String> webhooks;
 
-    private Long revisionId;
-
-    private String revisionName;
-
-    public URI getEndpoint() {
-        return endpoint;
+    public URI getSource() {
+        return source;
     }
 
-    public DecisionStatus setEndpoint(URI endpoint) {
-        this.endpoint = endpoint;
-        return this;
+    public void setSource(URI source) {
+        this.source = source;
     }
 
-    public Long getRevisionId() {
-        return revisionId;
+    public Kafka getKafka() {
+        return kafka;
     }
 
-    public DecisionStatus setRevisionId(Long revisionId) {
-        this.revisionId = revisionId;
-        return this;
+    public void setKafka(Kafka kafka) {
+        this.kafka = kafka;
     }
 
-    public String getRevisionName() {
-        return revisionName;
+    public Collection<EnvVar> getEnv() {
+        return env;
     }
 
-    public DecisionStatus setRevisionName(String revisionName) {
-        this.revisionName = revisionName;
-        return this;
+    public void setEnv(Collection<EnvVar> env) {
+        this.env = env;
+    }
+
+    public Collection<String> getWebhooks() {
+        return webhooks;
+    }
+
+    public void setWebhooks(Collection<String> webhooks) {
+        this.webhooks = webhooks;
     }
 
 }

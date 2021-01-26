@@ -3,8 +3,7 @@ kind: DecisionRequest
 metadata:
   name: kafka-decision
 spec:
-  name: my-kafka-decision
   customerId: kermit
-  source: https://raw.githubusercontent.com/kiegroup/kogito-examples/stable/dmn-drools-quarkus-metrics/src/main/resources/org/kie/kogito/examples/LoanEligibility.dmn
+  source: https://raw.githubusercontent.com/kiegroup/kogito-examples/stable/dmn-drools-quarkus-metrics/src/main/resources/org/kie/kogito/examples/LoanEligibility2.dmn
   webhooks:
     - http://my-server.example.com/callback?foo

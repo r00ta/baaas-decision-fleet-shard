@@ -32,10 +32,8 @@ class ValidationTest {
     @Test
     void validateDecisionSpec() {
         DecisionSpec spec = new DecisionSpecBuilder().build();
-        assertThat(validator.validate(spec), hasSize(3));
-        spec.setCustomerId("kermit");
         assertThat(validator.validate(spec), hasSize(2));
-        spec.setName("my decision");
+        spec.setCustomerId("kermit");
         assertThat(validator.validate(spec), hasSize(1));
         spec.setSource(URI.create("http://somewhere.com"));
         assertThat(validator.validate(spec), empty());
@@ -45,7 +43,6 @@ class ValidationTest {
     void validateKafkaDecisionSpec() {
         DecisionSpec spec = new DecisionSpecBuilder()
                 .withCustomerId("kermit")
-                .withName("my decision")
                 .withSource(URI.create("http://somewhere.com"))
                 .withKafka(new KafkaBuilder().build())
                 .build();

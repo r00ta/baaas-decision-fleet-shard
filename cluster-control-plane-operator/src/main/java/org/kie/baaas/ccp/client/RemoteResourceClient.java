@@ -16,6 +16,7 @@
 package org.kie.baaas.ccp.client;
 
 import java.net.URI;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;

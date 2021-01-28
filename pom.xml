@@ -14,6 +14,7 @@
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.version>3.8.1</maven.compiler.version>
         <maven.surefire.version>3.0.0-M5</maven.surefire.version>
+        <maven.checkstyle.version>3.1.1</maven.checkstyle.version>
         <quarkus.version>1.11.0.Final</quarkus.version>
         <operator-sdk.version>1.7.0</operator-sdk.version>
         <builder-annotations.version>0.24.2</builder-annotations.version>
@@ -71,6 +72,60 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven.surefire.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-checkstyle-plugin</artifactId>
+                    <version>${maven.checkstyle.version}</version>
+                    <executions>
+                        <execution>
+                            <id>validate</id>
+                            <phase>validate</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                            <configuration>
+                                <checkstyleRules>
+                                    <module name="Checker">
+                                        <!-- Checks for whitespace. -->
+                                        <module name="FileTabCharacter">
+                                            <property name="severity" value="error"/>
+                                            <property name="eachLine" value="true"/>
+                                        </module>
+                                        <module name="TreeWalker">
+                                            <!-- Import settings: getting rid of redundant import, forbid star notation, defined order of imports. -->
+                                            <module name="RedundantImport"/>
+                                            <module name="AvoidStarImport">
+                                                <property name="allowClassImports" value="false"/>
+                                                <property name="allowStaticMemberImports" value="false"/>
+                                            </module>
+                                            <module name="CustomImportOrder">
+                                                <property name="customImportOrderRules"
+                                                          value="STANDARD_JAVA_PACKAGE###SPECIAL_IMPORTS###THIRD_PARTY_PACKAGE###STATIC"/>
+                                                <property name="specialImportsRegExp" value="^javax\."/>
+                                                <property name="standardPackageRegExp" value="^java\."/>
+                                                <property name="sortImportsInGroupAlphabetically" value="true"/>
+                                                <property name="separateLineBetweenGroups" value="true"/>
+                                            </module>
+                                            <module name="UnusedImports"/>
+                                            <module name="NeedBraces">
+                                                <property name="tokens"
+                                                          value="LITERAL_IF, LITERAL_ELSE, LITERAL_FOR, LITERAL_WHILE, LITERAL_DO"/>
+                                            </module>
+                                            <module name="EqualsHashCode"/>
+                                        </module>
+                                    </module>
+                                </checkstyleRules>
+                                <outputFile>${project.build.directory}/checkstyle.log</outputFile>
+                                <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                                <includeResources>true</includeResources>
+                                <includeTestResources>true</includeTestResources>
+                                <consoleOutput>false</consoleOutput>
+                                <logViolationsToConsole>true</logViolationsToConsole>
+                                <failsOnError>true</failsOnError>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>

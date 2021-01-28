@@ -3,13 +3,12 @@ package org.kie.baaas.ccp.service;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
-import io.fabric8.kubernetes.client.utils.KubernetesResourceUtil;
-import io.fabric8.kubernetes.client.utils.Serialization;
 import org.kie.baaas.api.Decision;
 import org.kie.baaas.api.DecisionRevision;
 import org.kie.baaas.api.DecisionRevisionStatus;

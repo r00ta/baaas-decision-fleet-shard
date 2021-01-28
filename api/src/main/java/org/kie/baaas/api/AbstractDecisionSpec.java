@@ -17,6 +17,7 @@ package org.kie.baaas.api;
 
 import java.net.URI;
 import java.util.Collection;
+
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 

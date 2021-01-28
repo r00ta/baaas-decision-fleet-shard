@@ -16,12 +16,16 @@
 package org.kie.baaas.api;
 
 import java.net.URI;
+
 import javax.inject.Inject;
 import javax.validation.Validator;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasSize;
 
 @QuarkusTest
 class ValidationTest {

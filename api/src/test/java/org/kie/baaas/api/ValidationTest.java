@@ -34,19 +34,31 @@ class ValidationTest {
     Validator validator;
 
     @Test
-    void validateDecisionSpec() {
-        DecisionSpec spec = new DecisionSpecBuilder().build();
+    void validateDecisionRequestSpec() {
+        DecisionRequestSpec spec = new DecisionRequestSpecBuilder().build();
         assertThat(validator.validate(spec), hasSize(2));
         spec.setCustomerId("kermit");
         assertThat(validator.validate(spec), hasSize(1));
-        spec.setSource(URI.create("http://somewhere.com"));
+        spec.setName("my decision");
+        assertThat(validator.validate(spec), empty());
+    }
+
+    @Test
+    void validateDecisionSpec() {
+        DecisionSpec spec = new DecisionSpecBuilder().build();
+        assertThat(validator.validate(spec), hasSize(1));
+        spec.setDefinition(new DecisionVersionSpec());
+        assertThat(validator.validate(spec), hasSize(2));
+        spec.getDefinition().setVersion("v1");
+        assertThat(validator.validate(spec), hasSize(1));
+        spec.getDefinition().setSource(URI.create("http://example.com"));
         assertThat(validator.validate(spec), empty());
     }
 
     @Test
     void validateKafkaDecisionSpec() {
-        DecisionSpec spec = new DecisionSpecBuilder()
-                .withCustomerId("kermit")
+        DecisionVersionSpec spec = new DecisionVersionSpecBuilder()
+                .withVersion("v1.0")
                 .withSource(URI.create("http://somewhere.com"))
                 .withKafka(new KafkaBuilder().build())
                 .build();

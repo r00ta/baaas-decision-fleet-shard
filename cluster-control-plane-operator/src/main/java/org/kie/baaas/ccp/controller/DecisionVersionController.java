@@ -24,18 +24,18 @@ import io.javaoperatorsdk.operator.api.Controller;
 import io.javaoperatorsdk.operator.api.DeleteControl;
 import io.javaoperatorsdk.operator.api.ResourceController;
 import io.javaoperatorsdk.operator.api.UpdateControl;
-import org.kie.baaas.api.DecisionRevision;
-import org.kie.baaas.api.Phase;
+import org.kie.baaas.api.DecisionVersion;
+import org.kie.baaas.api.DecisionVersionStatus;
 import org.kie.baaas.ccp.client.RemoteResourceClient;
-import org.kie.baaas.ccp.service.DecisionRevisionService;
+import org.kie.baaas.ccp.service.DecisionVersionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Controller
 @ApplicationScoped
-public class DecisionRevisionController implements ResourceController<DecisionRevision> {
+public class DecisionVersionController implements ResourceController<DecisionVersion> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DecisionRevisionController.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DecisionVersionController.class);
 
     @Inject
     KubernetesClient kubernetesClient;
@@ -44,20 +44,20 @@ public class DecisionRevisionController implements ResourceController<DecisionRe
     RemoteResourceClient resourceClient;
 
     @Inject
-    DecisionRevisionService decisionRevisionService;
+    DecisionVersionService decisionRevisionService;
 
-    public DeleteControl deleteResource(DecisionRevision revision, Context<DecisionRevision> context) {
+    public DeleteControl deleteResource(DecisionVersion revision, Context<DecisionVersion> context) {
         LOGGER.info("Create or update DecisionRevision: {} in namespace {}", revision.getMetadata().getName(), revision.getMetadata().getNamespace());
-        if (revision.getStatus() == null || !Phase.REPLACED.equals(revision.getStatus().getPhase())) {
-            decisionRevisionService.promoteRevision(revision.getMetadata().getNamespace(), revision.getMetadata().getLabels().get(DecisionController.DECISION_LABEL));
-        }
         return DeleteControl.DEFAULT_DELETE;
     }
 
-    public UpdateControl<DecisionRevision> createOrUpdateResource(DecisionRevision revision, Context<DecisionRevision> context) {
-        LOGGER.info("Create or update DecisionRevision: {} in namespace {}", revision.getMetadata().getName(), revision.getMetadata().getNamespace());
-        if(revision.getStatus() == null) {
-            decisionRevisionService.provision(revision);
+    public UpdateControl<DecisionVersion> createOrUpdateResource(DecisionVersion version, Context<DecisionVersion> context) {
+        LOGGER.info("Create or update DecisionRevision: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
+        if (version.getStatus() == null) {
+            //TODO: Create build
+//            decisionRevisionService.provision(version);
+            version.setStatus(new DecisionVersionStatus().setReady(Boolean.FALSE));
+            return UpdateControl.updateStatusSubResource(version);
         }
         return UpdateControl.noUpdate();
     }

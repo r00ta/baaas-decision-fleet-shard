@@ -15,27 +15,27 @@
 
 package org.kie.baaas.ccp.controller;
 
+import java.util.List;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.utils.KubernetesResourceUtil;
 import io.javaoperatorsdk.operator.api.Context;
 import io.javaoperatorsdk.operator.api.Controller;
 import io.javaoperatorsdk.operator.api.DeleteControl;
 import io.javaoperatorsdk.operator.api.ResourceController;
 import io.javaoperatorsdk.operator.api.UpdateControl;
 import org.kie.baaas.api.Decision;
-import org.kie.baaas.api.DecisionRevision;
-import org.kie.baaas.api.DecisionRevisionBuilder;
-import org.kie.baaas.api.DecisionRevisionSpec;
-import org.kie.baaas.api.DecisionRevisionStatusBuilder;
-import org.kie.baaas.api.DecisionStatusBuilder;
-import org.kie.baaas.api.Phase;
-import org.kie.baaas.ccp.service.DecisionRevisionService;
+import org.kie.baaas.api.DecisionStatus;
+import org.kie.baaas.api.DecisionVersion;
+import org.kie.baaas.api.DecisionVersionBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.kie.baaas.ccp.controller.DecisionRequestController.CUSTOMER_LABEL;
 
 @Controller
 @ApplicationScoped
@@ -47,9 +47,6 @@ public class DecisionController implements ResourceController<Decision> {
     @Inject
     KubernetesClient kubernetesClient;
 
-    @Inject
-    DecisionRevisionService decisionRevisionService;
-
     public DeleteControl deleteResource(Decision decision, Context<Decision> context) {
         LOGGER.info("Create or update Decision: {} in namespace {}", decision.getMetadata().getName(), decision.getMetadata().getNamespace());
         return DeleteControl.DEFAULT_DELETE;
@@ -57,56 +54,39 @@ public class DecisionController implements ResourceController<Decision> {
 
     public UpdateControl<Decision> createOrUpdateResource(Decision decision, Context<Decision> context) {
         LOGGER.info("Create or update Decision: {} in namespace {}", decision.getMetadata().getName(), decision.getMetadata().getNamespace());
-        try {
-            return createOrUpdateRevision(decision);
-        } catch (KubernetesClientException e) {
-            LOGGER.error("Unable to create or update DecisionRevision", e);
-            return UpdateControl.noUpdate();
-        }
+        return createOrUpdateDecisionVersion(decision);
     }
 
-    private UpdateControl<Decision> createOrUpdateRevision(Decision decision) {
-        DecisionRevision latest = decisionRevisionService.getLatest(decision.getMetadata().getNamespace(), decision.getMetadata().getName());
-        Long id = 1L;
-        if(latest != null) {
-            id = latest.getSpec().getId();
-        }
-        DecisionRevision expected = new DecisionRevisionBuilder()
+    private UpdateControl<Decision> createOrUpdateDecisionVersion(Decision decision) {
+        String namespace = KubernetesResourceUtil.getNamespace(decision);
+        DecisionVersion expected = new DecisionVersionBuilder()
                 .withMetadata(new ObjectMetaBuilder()
-                        .withName(decision.getMetadata().getName() + "-" + id)
-                        .withNamespace(decision.getMetadata().getNamespace())
+                        .withName(decision.getMetadata().getName() + "-" + decision.getSpec().getDefinition().getVersion())
+                        .withNamespace(namespace)
                         .addToLabels(DECISION_LABEL, decision.getMetadata().getName())
+                        .addToLabels(CUSTOMER_LABEL, decision.getMetadata().getLabels().get(CUSTOMER_LABEL))
                         .withOwnerReferences(decision.getOwnerReference())
                         .build())
-                .withSpec(DecisionRevisionSpec.build(id, decision.getMetadata().getName(), decision.getSpec()))
+                .withSpec(decision.getSpec().getDefinition())
                 .build();
-        if (latest == null || !expected.getSpec().equals(latest.getSpec())) {
-            if (latest != null) {
-                expected.getMetadata().setName(decision.getMetadata().getName() + "-" + ++id);
-                expected.getSpec().setId(id);
-                replaceCurrentRevision(latest);
-            }
-            kubernetesClient.customResources(DecisionRevision.class)
-                    .inNamespace(decision.getMetadata().getNamespace())
+        List<DecisionVersion> versions = kubernetesClient.customResources(DecisionVersion.class)
+                .inNamespace(namespace)
+                .withLabel(DECISION_LABEL, decision.getMetadata().getName())
+                .list()
+                .getItems();
+        DecisionVersion current = null;
+        if (versions.stream().noneMatch(v -> expected.getMetadata().getName().equals(v.getMetadata().getName()))) {
+            current = kubernetesClient.customResources(DecisionVersion.class)
+                    .inNamespace(expected.getMetadata().getNamespace())
                     .create(expected);
-            return updateDecisionStatus(decision, expected);
+            versions.add(current);
+            if (decision.getStatus() == null) {
+                decision.setStatus(new DecisionStatus());
+            }
+            decision.getStatus().setVersionId(current.getSpec().getVersion());
+            return UpdateControl.updateStatusSubResource(decision);
         }
         return UpdateControl.noUpdate();
     }
 
-    private void replaceCurrentRevision(DecisionRevision current) {
-        current.setStatus(new DecisionRevisionStatusBuilder().withPhase(Phase.REPLACED).build());
-        kubernetesClient.customResources(DecisionRevision.class)
-                .inNamespace(current.getMetadata().getNamespace())
-                .withName(current.getMetadata().getName())
-                .updateStatus(current);
-    }
-
-    private UpdateControl<Decision> updateDecisionStatus(Decision decision, DecisionRevision revision) {
-        decision.setStatus(new DecisionStatusBuilder()
-                .withRevisionId(revision.getSpec().getId())
-                .withRevisionName(revision.getMetadata().getName())
-                .build());
-        return UpdateControl.updateStatusSubResource(decision);
-    }
 }

@@ -26,6 +26,6 @@ import io.sundr.builder.annotations.BuildableReference;
 @Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
         @BuildableReference(CustomResource.class)
 })
-public class DecisionRevision extends CustomResource<DecisionRevisionSpec, DecisionRevisionStatus> implements Namespaced {
+public class DecisionVersion extends CustomResource<DecisionVersionSpec, DecisionVersionStatus> implements Namespaced {
 
 }

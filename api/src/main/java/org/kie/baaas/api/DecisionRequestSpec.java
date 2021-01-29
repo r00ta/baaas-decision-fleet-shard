@@ -16,6 +16,10 @@
 package org.kie.baaas.api;
 
 import java.net.URI;
+import java.util.Collection;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -28,8 +32,10 @@ import lombok.experimental.Accessors;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-        "endpoint",
-        "versionId"
+        "customerId",
+        "name",
+        "definition",
+        "webhooks"
 })
 @Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
 @ToString
@@ -37,9 +43,15 @@ import lombok.experimental.Accessors;
 @Getter
 @Setter
 @Accessors(chain = true)
-public class DecisionStatus {
+public class DecisionRequestSpec {
 
-    private URI endpoint;
-    private String versionId;
+    @NotBlank
+    private String customerId;
+    @NotBlank
+    private String name;
+    @Valid
+    private DecisionVersionSpec definition;
+    @Valid
+    private Collection<URI> webhooks;
 
 }

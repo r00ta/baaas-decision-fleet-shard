@@ -15,38 +15,38 @@
 
 package org.kie.baaas.api;
 
-import javax.validation.constraints.NotBlank;
+import java.net.URI;
+import java.util.Collection;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.Accessors;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-        "customerId",
-        "source",
-        "kafka",
-        "env",
+        "definition",
         "webhooks"
 })
-@RegisterForReflection
 @Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
-@ToString(callSuper = true)
-@EqualsAndHashCode(callSuper = true)
-public class DecisionSpec extends AbstractDecisionSpec {
+@ToString
+@EqualsAndHashCode
+@Getter
+@Setter
+@Accessors(chain = true)
+public class DecisionSpec {
 
-    @NotBlank
-    private String customerId;
-
-    public String getCustomerId() {
-        return customerId;
-    }
-
-    public void setCustomerId(String customerId) {
-        this.customerId = customerId;
-    }
+    @Valid
+    @NotNull
+    private DecisionVersionSpec definition;
+    @Valid
+    private Collection<URI> webhooks;
 
 }

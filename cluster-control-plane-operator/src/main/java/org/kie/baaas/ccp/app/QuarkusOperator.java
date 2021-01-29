@@ -27,7 +27,7 @@ import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
 import org.kie.baaas.api.Decision;
 import org.kie.baaas.api.DecisionRequest;
-import org.kie.baaas.api.DecisionRevision;
+import org.kie.baaas.api.DecisionVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +52,7 @@ public class QuarkusOperator implements QuarkusApplication {
     ResourceController<DecisionRequest> decisionRequestController;
 
     @Inject
-    ResourceController<DecisionRevision> decisionRevisionController;
+    ResourceController<DecisionVersion> decisionRevisionController;
 
     public static void main(String... args) {
         Quarkus.run(QuarkusOperator.class, args);
@@ -61,7 +61,7 @@ public class QuarkusOperator implements QuarkusApplication {
     public int run(String... args) {
         ControllerConfiguration<Decision> decisionControllerConfig = configuration.getConfigurationFor(decisionController);
         LOGGER.info("CR: {}", decisionControllerConfig.getCustomResourceClass());
-        ControllerConfiguration<DecisionRevision> revisionControllerConfig = configuration.getConfigurationFor(decisionRevisionController);
+        ControllerConfiguration<DecisionVersion> revisionControllerConfig = configuration.getConfigurationFor(decisionRevisionController);
         LOGGER.info("CR: {}", revisionControllerConfig.getCustomResourceClass());
         ControllerConfiguration<DecisionRequest> requestControllerConfig = configuration.getConfigurationFor(decisionRequestController);
         LOGGER.info("CR: {}", requestControllerConfig.getCustomResourceClass());

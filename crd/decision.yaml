@@ -17,7 +17,11 @@ spec:
   subresources:
     status: {}
   additionalPrinterColumns:
-    - name: Revision
-      type: integer
+    - name: Endpoint
+      type: string
+      description: Decision endpoint
+      JSONPath: .status.endpoint
+    - name: Version
+      type: string
       description: Current decision revision
-      JSONPath: .status.revisionId
+      JSONPath: .status.versionId

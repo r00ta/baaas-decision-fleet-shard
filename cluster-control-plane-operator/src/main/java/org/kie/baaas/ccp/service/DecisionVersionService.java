@@ -10,31 +10,30 @@ import javax.inject.Inject;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import org.kie.baaas.api.Decision;
-import org.kie.baaas.api.DecisionRevision;
-import org.kie.baaas.api.DecisionRevisionStatus;
-import org.kie.baaas.api.DecisionRevisionStatusBuilder;
-import org.kie.baaas.api.Phase;
+import org.kie.baaas.api.DecisionVersion;
+import org.kie.baaas.api.DecisionVersionStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.kie.baaas.ccp.controller.DecisionController.DECISION_LABEL;
 
 @ApplicationScoped
-public class DecisionRevisionService {
+public class DecisionVersionService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DecisionRevisionService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DecisionVersionService.class);
 
     @Inject
     KubernetesClient kubernetesClient;
 
-    public DecisionRevision getLatest(String namespace, String decisionName) {
-        List<DecisionRevision> revisions = kubernetesClient.customResources(DecisionRevision.class)
+    @Deprecated
+    public DecisionVersion getLatest(String namespace, String decisionName) {
+        List<DecisionVersion> revisions = kubernetesClient.customResources(DecisionVersion.class)
                 .inNamespace(namespace)
                 .withLabel(DECISION_LABEL, decisionName)
                 .list()
                 .getItems();
         if (!revisions.isEmpty()) {
-            Optional<DecisionRevision> latest = revisions.stream().max(Comparator.comparingLong(a -> a.getSpec().getId()));
+            Optional<DecisionVersion> latest = revisions.stream().max(Comparator.comparing(a -> a.getSpec().getVersion()));
             if (latest.isPresent()) {
                 LOGGER.debug("Fetched latest decision revision {}", decisionName);
                 return latest.get();
@@ -44,26 +43,26 @@ public class DecisionRevisionService {
         return null;
     }
 
+    @Deprecated
     public void promoteRevision(String namespace, String decisionName) {
-        List<DecisionRevision> revisions = kubernetesClient.customResources(DecisionRevision.class)
+        List<DecisionVersion> revisions = kubernetesClient.customResources(DecisionVersion.class)
                 .inNamespace(namespace)
                 .withLabel(DECISION_LABEL, decisionName)
                 .list()
                 .getItems();
         if (!revisions.isEmpty()) {
-            Optional<DecisionRevision> latest = revisions.stream().filter(a -> a.getMetadata().getDeletionTimestamp() == null).max(Comparator.comparingLong(a -> a.getSpec().getId()));
+            Optional<DecisionVersion> latest = revisions.stream().filter(a -> a.getMetadata().getDeletionTimestamp() == null).max(Comparator.comparing(a -> a.getSpec().getVersion()));
             if (latest.isPresent()) {
                 LOGGER.debug("Promoting decision revision {}", latest.get().getMetadata().getName());
                 provision(latest.get());
                 Decision decision = kubernetesClient.customResources(Decision.class)
                         .inNamespace(latest.get().getMetadata().getNamespace())
-                        .withName(latest.get().getSpec().getDecision())
+                        .withName(latest.get().getMetadata().getName())
                         .get();
-                if(decision != null) {
+                if (decision != null) {
                     LOGGER.debug("Update revision in decision");
                     decision.getStatus()
-                            .setRevisionId(latest.get().getSpec().getId())
-                            .setRevisionName(latest.get().getMetadata().getName());
+                            .setVersionId(latest.get().getSpec().getVersion());
                     kubernetesClient.customResources(Decision.class)
                             .updateStatus(decision);
                 }
@@ -72,28 +71,29 @@ public class DecisionRevisionService {
         LOGGER.debug("No DecisionRevision to promote for decision: {}", decisionName);
     }
 
-    public void provision(DecisionRevision revision) {
+    @Deprecated
+    public void provision(DecisionVersion revision) {
         if (revision.getStatus() == null) {
-            revision.setStatus(new DecisionRevisionStatus());
+            revision.setStatus(new DecisionVersionStatus());
         }
         try {
             //TODO: Do provisioning and register EventSources or Watchers
-            revision.setStatus(new DecisionRevisionStatusBuilder()
-                    .withPhase(Phase.BUILDING)
+            revision.setStatus(new DecisionVersionStatus().setBuilding()
                     //with other stuff
-                    .build());
-            kubernetesClient.customResources(DecisionRevision.class)
+            );
+            kubernetesClient.customResources(DecisionVersion.class)
                     .inNamespace(revision.getMetadata().getNamespace())
                     .withName(revision.getMetadata().getName())
                     .updateStatus(revision);
         } catch (KubernetesClientException e) {
-            revision.getStatus()
-                    .setPhase(Phase.FAILED)
-                    .setMessage(e.getMessage());
-            kubernetesClient.customResources(DecisionRevision.class)
+//            revision.getStatus()
+//                    .setPhase(Phase.FAILED)
+//                    .getConditions().add(new ConditionBuilder().withMessage(e.getMessage()).withLastTransitionTime(new Date().toString()).with)setMessage(e.getMessage());
+            kubernetesClient.customResources(DecisionVersion.class)
                     .inNamespace(revision.getMetadata().getNamespace())
                     .withName(revision.getMetadata().getName())
                     .updateStatus(revision);
         }
     }
+
 }

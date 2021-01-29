@@ -1,9 +1,12 @@
 apiVersion: operator.baaas/v1alpha1
 kind: DecisionRequest
 metadata:
-  name: kafka-decision
+  name: example-decision-request
 spec:
   customerId: kermit
-  source: https://raw.githubusercontent.com/kiegroup/kogito-examples/stable/dmn-drools-quarkus-metrics/src/main/resources/org/kie/kogito/examples/LoanEligibility2.dmn
+  name: example-decision
+  definition:
+    version: 1
+    source: https://raw.githubusercontent.com/kiegroup/kogito-examples/stable/dmn-drools-quarkus-metrics/src/main/resources/org/kie/kogito/examples/LoanEligibility2.dmn
   webhooks:
     - http://my-server.example.com/callback?foo

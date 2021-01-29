@@ -17,7 +17,8 @@ package org.kie.baaas.api;
 
 public enum Phase {
     BUILDING,
-    DEPLOYED,
+    CURRENT,
     FAILED,
-    REPLACED
+    READY,
+    DELETED
 }

@@ -22,83 +22,36 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.Accessors;
+
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
 @JsonPropertyOrder({
         "name",
+        "version",
         "phase",
         "endpoint",
         "at",
         "code",
         "message"
 })
+@Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
 @ToString
 @EqualsAndHashCode
+@Getter
+@Setter
+@Accessors(chain = true)
 public class Webhook {
 
     private String name;
-    private int version;
+    private String version;
     private Phase phase;
     private URI endpoint;
     private Date at;
     private int code;
     private String message;
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public int getVersion() {
-        return version;
-    }
-
-    public void setVersion(int version) {
-        this.version = version;
-    }
-
-    public URI getEndpoint() {
-        return endpoint;
-    }
-
-    public void setEndpoint(URI endpoint) {
-        this.endpoint = endpoint;
-    }
-
-    public Phase getPhase() {
-        return phase;
-    }
-
-    public void setPhase(Phase phase) {
-        this.phase = phase;
-    }
-
-    public Date getAt() {
-        return at;
-    }
-
-    public void setAt(Date at) {
-        this.at = at;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
 }

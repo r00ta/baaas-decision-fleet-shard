@@ -1,0 +1,16 @@
+---
+kind: Decision
+version: org.kie.baaas/v1Alpha1
+metadata:
+  name: 'my-decision'
+  labels:
+    org.kie.baaas/customerId: '1'
+    org.kie.baaas/decisionRequest: 'my-decision-request'
+spec:
+  currentVersion: 'my-decision-version-1'
+  webhooks:
+    - 'https://url-of-mcp.internal.baaas.redhat.com/callbacks'
+status:
+  endpoint: 'https://my-decision.baaas.redhat.com'
+  currentVersion: '4'
+  message: 'Some status message about which version is current'

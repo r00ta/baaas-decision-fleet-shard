@@ -32,8 +32,8 @@ build:
   tags:
     - baaas
   only:
-    - /^main$/
-    - merge_requests
+    - main@baaas/baaas-cluster-control-plane
+    - merge_requests@baaas/baaas-cluster-control-plane
 
 test:
   <<: *cache-definition
@@ -49,8 +49,8 @@ test:
   tags:
     - baaas
   only:
-    - /^main$/
-    - merge_requests
+    - main@baaas/baaas-cluster-control-plane
+    - merge_requests@baaas/baaas-cluster-control-plane
 
 native-compile:
   <<: *cache-definition
@@ -65,7 +65,7 @@ native-compile:
   tags:
     - baaas
   only:
-    - /^main$/
+    - main@baaas/baaas-cluster-control-plane
 
 build-and-push-container:
   image: docker:19.03.12
@@ -80,4 +80,4 @@ build-and-push-container:
   tags:
     - baaas
   only:
-    - /^main$/
+    - main@baaas/baaas-cluster-control-plane

@@ -142,7 +142,7 @@ public class DecisionVersionService {
     }
 
     public DecisionVersion setKogitoSvcRef(DecisionVersion version, String kogitoServiceRef) {
-        version.getStatus().setKogitoSvc(kogitoServiceRef);
+        version.getStatus().setKogitoServiceRef(kogitoServiceRef);
         return kubernetesClient.customResources(DecisionVersion.class)
                 .inNamespace(version.getMetadata().getNamespace())
                 .updateStatus(version);

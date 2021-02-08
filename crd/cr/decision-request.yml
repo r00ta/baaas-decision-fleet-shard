@@ -8,22 +8,21 @@ spec:
   decision:
     name: 'my-decision'
     version: '1'
-    source:
-      uri: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
+    source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
     kafka:
       bootstrapServers: 'my-kafka-bootstrap:9092,other-bootstrap:9092'
       secretName: 'my-kafka-secret'
-      incoming: 'incomingTopic'
-      outgoing: 'outgoingTopic'
+      incomingTopic: 'incomingTopic'
+      outgoingTopic: 'outgoingTopic'
     env:
       - FOO=example
       - BAR=baz
   webhooks:
     - 'https://url-of-mcp.internal.baaas.redhat.com/callbacks'
 status:
-  decisionName: 'my-decision' # The Decision instance created to deploy this request
-  decisionVersion: '1' #The DecisionVersion instance created to deploy this request
-  decisionNamespace: 'baaas-customer-1' # The namespace created by the CCP for this customer
-  status:
-    admission: (ACCEPTED|REJECTED)
+  versionRef:
+    name: 'my-decision' # The Decision instance created to deploy this request
+    version: '1' #The DecisionVersion instance created to deploy this request
+    namespace: 'baaas-customer-1' # The namespace created by the CCP for this customer
+  state: (SUCCESS|REJECTED)
   message: 'Accepted because... || Rejected because...'

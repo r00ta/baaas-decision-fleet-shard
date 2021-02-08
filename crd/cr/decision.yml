@@ -1,0 +1,26 @@
+---
+kind: Decision
+version: org.kie.baaas/v1Alpha1
+metadata:
+  name: 'my-decision'
+  labels:
+    org.kie.baaas/customer: '1'
+    org.kie.baaas/decisionrequest: 'my-decision-request'
+spec:
+  definition:
+    name: 'my-decision'
+    version: '1'
+    source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
+    kafka:
+      bootstrapServers: 'my-kafka-bootstrap:9092,other-bootstrap:9092'
+      secretName: 'my-kafka-secret'
+      incomingTopic: 'incomingTopic'
+      outgoingTopic: 'outgoingTopic'
+    env:
+      - FOO=example
+      - BAR=baz
+  webhooks:
+    - 'https://url-of-mcp.internal.baaas.redhat.com/callbacks'
+status:
+  endpoint: 'https://my-decision.baaas.redhat.com'
+  currentVersion: '4'

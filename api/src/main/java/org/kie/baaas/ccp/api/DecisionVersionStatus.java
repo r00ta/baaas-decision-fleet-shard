@@ -36,10 +36,10 @@ import lombok.experimental.Accessors;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-        "pipeline_ref",
-        "image_ref",
-        "kogito_service_ref",
-        "configmap_ref",
+        "pipelineRef",
+        "imageRef",
+        "kogitoServiceRef",
+        "configRef",
         "conditions"
 })
 @JsonDeserialize
@@ -67,7 +67,7 @@ public class DecisionVersionStatus {
     @JsonProperty
     private String imageRef;
     @JsonProperty
-    private String kogitoSvc;
+    private String kogitoServiceRef;
     //ConfigMap name where the application.properties are stored
     @JsonProperty
     private String configRef;

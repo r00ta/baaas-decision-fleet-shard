@@ -36,7 +36,7 @@ import static org.kie.baaas.ccp.service.JsonResourceUtils.getNamespace;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getSpec;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getStatus;
 
-public class JsonResourceUtilsTest {
+class JsonResourceUtilsTest {
 
     @Test
     void testGet() {
@@ -120,11 +120,6 @@ public class JsonResourceUtilsTest {
         assertFalse(getConditionStatus(buildBasicResourceWithConditions(), "Condition2"));
 
         assertTrue(getConditionStatus(buildBasicResourceWithConditions(), "Condition1"));
-    }
-
-    @Test
-    void testBuildParam() {
-
     }
 
     private static JsonObject buildBasicResource() {

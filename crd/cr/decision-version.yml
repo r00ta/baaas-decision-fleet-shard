@@ -4,7 +4,7 @@ version: org.kie.baaas/v1Alpha1
 metadata:
   name: 'my-decision-version-1'
   labels:
-    org.kie.baaas/customerId: '1'
+    org.kie.baaas/customer: '1'
     org.kie.baaas/decision: 'my-decision'
 spec:
   version: '1'
@@ -19,9 +19,21 @@ spec:
     incoming: 'incomingTopic'
     outgoing: 'outgoingTopic'
 status:
-  phase: 'BUILDING|READY|CURRENT|FAILED'
-  message: 'status message'
   pipelineRef: 'reference to the pipeline'
   imageRef: 'reference to the image for this version'
   kogitoServiceRef: ' reference to the KogitoService CRD for this version'
   configRef: 'reference to the configmap containing application.properties for this version'
+  conditions:
+    - lastTransitionTime: "2021-02-08T11:07:37.561986Z"
+      message: ""
+      reason: ""
+      status: "False"
+      type: Ready
+    - lastTransitionTime: "2021-02-08T11:07:38.517975Z"
+      message: 'Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 0'
+      reason: Running
+      status: "False"
+      type: Build
+    - lastTransitionTime: "2021-02-08T11:07:39.686795Z"
+      status: "True"
+      type: Current

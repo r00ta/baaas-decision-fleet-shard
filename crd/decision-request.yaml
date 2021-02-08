@@ -16,3 +16,8 @@ spec:
       storage: true
   subresources:
     status: {}
+  additionalPrinterColumns:
+    - name: Admission
+      type: string
+      description: Admission status
+      JSONPath: .status.state

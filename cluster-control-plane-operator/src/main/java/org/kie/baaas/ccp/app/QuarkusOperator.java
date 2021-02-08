@@ -19,15 +19,10 @@ import javax.inject.Inject;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.Operator;
-import io.javaoperatorsdk.operator.api.ResourceController;
 import io.javaoperatorsdk.operator.api.config.ConfigurationService;
-import io.javaoperatorsdk.operator.api.config.ControllerConfiguration;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
-import org.kie.baaas.api.Decision;
-import org.kie.baaas.api.DecisionRequest;
-import org.kie.baaas.api.DecisionVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,27 +40,11 @@ public class QuarkusOperator implements QuarkusApplication {
     @Inject
     ConfigurationService configuration;
 
-    @Inject
-    ResourceController<Decision> decisionController;
-
-    @Inject
-    ResourceController<DecisionRequest> decisionRequestController;
-
-    @Inject
-    ResourceController<DecisionVersion> decisionRevisionController;
-
     public static void main(String... args) {
         Quarkus.run(QuarkusOperator.class, args);
     }
 
     public int run(String... args) {
-        ControllerConfiguration<Decision> decisionControllerConfig = configuration.getConfigurationFor(decisionController);
-        LOGGER.info("CR: {}", decisionControllerConfig.getCustomResourceClass());
-        ControllerConfiguration<DecisionVersion> revisionControllerConfig = configuration.getConfigurationFor(decisionRevisionController);
-        LOGGER.info("CR: {}", revisionControllerConfig.getCustomResourceClass());
-        ControllerConfiguration<DecisionRequest> requestControllerConfig = configuration.getConfigurationFor(decisionRequestController);
-        LOGGER.info("CR: {}", requestControllerConfig.getCustomResourceClass());
-
         Quarkus.waitForExit();
         return 0;
     }

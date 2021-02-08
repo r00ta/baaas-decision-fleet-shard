@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.kie.baaas.api;
+package org.kie.baaas.ccp.api;
 
 import io.fabric8.kubernetes.api.model.Namespaced;
 import io.fabric8.kubernetes.client.CustomResource;
@@ -23,9 +23,9 @@ import io.sundr.builder.annotations.BuildableReference;
 
 @Group(DecisionConstants.GROUP)
 @Version(DecisionConstants.VERSION)
-@Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
+@Buildable(editableEnabled = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
         @BuildableReference(CustomResource.class)
 })
-public class DecisionVersion extends CustomResource<DecisionVersionSpec, DecisionVersionStatus> implements Namespaced {
+public class DecisionRequest extends CustomResource<DecisionRequestSpec, DecisionRequestStatus> implements Namespaced {
 
 }

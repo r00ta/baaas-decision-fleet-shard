@@ -3,6 +3,9 @@ kind: DecisionRequest
 metadata:
   name: bad-decision-request
 spec:
-  source: https://raw.githubusercontent.com/kiegroup/kogito-examples/stable/dmn-drools-quarkus-metrics/src/main/resources/org/kie/kogito/examples/LoanEligibility.dmn
+  name: bad-decision
+  definition:
+    version: 1
+    source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
   webhooks:
     - http://my-server.example.com/callback?foo

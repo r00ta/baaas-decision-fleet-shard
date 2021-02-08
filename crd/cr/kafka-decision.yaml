@@ -6,7 +6,7 @@ spec:
   customerId: kermit
   source: https://raw.githubusercontent.com/kiegroup/kogito-examples/stable/dmn-drools-quarkus-metrics/src/main/resources/org/kie/kogito/examples/LoanEligibility.dmn
   kafka:
-    host: my-kafka-cluster.example.org:443
+    bootstrapServers: my-kafka-cluster.example.org:443
     secretName: my-kafka-cluster-credentials
     inputTopic: theinput
     outputTopic: theoutput

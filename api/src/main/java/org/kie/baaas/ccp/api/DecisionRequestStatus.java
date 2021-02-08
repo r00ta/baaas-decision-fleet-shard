@@ -13,13 +13,15 @@
  * limitations under the License.
  */
 
-package org.kie.baaas.api;
-
-import javax.validation.constraints.NotBlank;
+package org.kie.baaas.ccp.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.dekorate.crd.annotation.PrinterColumn;
 import io.sundr.builder.annotations.Buildable;
+import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,27 +29,31 @@ import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
 @JsonPropertyOrder({
-        "host",
-        "secretName",
-        "inputTopic",
-        "outputTopic"
+        "versionRef",
+        "state",
+        "reason",
+        "message"
+})
+@JsonDeserialize
+@Buildable(editableEnabled = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
+        @BuildableReference(DecisionVersionRef.class)
 })
 @ToString
 @EqualsAndHashCode
 @Getter
 @Setter
 @Accessors(chain = true)
-public class Kafka {
+public class DecisionRequestStatus {
 
-    @NotBlank
-    private String host;
-    @NotBlank
-    private String secretName;
-    @NotBlank
-    private String inputTopic;
-    @NotBlank
-    private String outputTopic;
+    @JsonProperty
+    private DecisionVersionRef versionRef;
+    @JsonProperty("state")
+    @PrinterColumn(name = "Admission")
+    private AdmissionStatus state;
+    @JsonProperty
+    private String reason;
+    @JsonProperty
+    private String message;
 
 }

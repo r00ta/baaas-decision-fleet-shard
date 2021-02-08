@@ -20,6 +20,7 @@
         <builder-annotations.version>0.24.2</builder-annotations.version>
         <hamcrest.version>2.2</hamcrest.version>
         <lombok.version>1.18.16</lombok.version>
+        <dekorate.version>2.0.0.beta8</dekorate.version>
     </properties>
 
     <dependencyManagement>
@@ -41,6 +42,12 @@
                 <groupId>io.sundr</groupId>
                 <artifactId>builder-annotations</artifactId>
                 <version>${builder-annotations.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.dekorate</groupId>
+                <artifactId>crd-annotations</artifactId>
+                <version>${dekorate.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>

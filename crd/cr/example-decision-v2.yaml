@@ -6,7 +6,7 @@ spec:
   customerId: kermit
   name: example-decision
   definition:
-    version: 1
+    version: 2
     source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
   webhooks:
-    - http://localhost:18080/callback
+    - http://my-server.example.com/callback?foo

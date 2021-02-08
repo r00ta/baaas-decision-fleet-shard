@@ -9,7 +9,7 @@ spec:
     name: 'my-decision'
     version: '1'
     source:
-      uri: 's3://baaas-storage-prod/customers/1/my-decision/1/dmn.xml'
+      uri: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
     kafka:
       bootstrapServers: 'my-kafka-bootstrap:9092,other-bootstrap:9092'
       secretName: 'my-kafka-secret'

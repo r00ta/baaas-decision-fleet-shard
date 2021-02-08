@@ -16,3 +16,20 @@ spec:
       storage: true
   subresources:
     status: {}
+  additionalPrinterColumns:
+    - name: Ready
+      type: string
+      description: Ready
+      JSONPath: .status.conditions[?(@.type=='Ready')].status
+    - name: Build
+      type: string
+      description: Build status
+      JSONPath: .status.conditions[?(@.type=='Build')].reason
+    - name: Service
+      type: string
+      description: Kogito Service status
+      JSONPath: .status.conditions[?(@.type=='Service')].reason
+    - name: Current
+      type: string
+      description: Is this the Current Version
+      JSONPath: .status.conditions[?(@.type=='Current')].status

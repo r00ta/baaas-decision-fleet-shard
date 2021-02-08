@@ -12,13 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.kie.baaas.ccp.api;
 
-package org.kie.baaas.api;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.fabric8.kubernetes.api.model.Namespaced;
-import io.fabric8.kubernetes.api.model.OwnerReference;
-import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
 import io.fabric8.kubernetes.client.CustomResource;
 import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.Version;
@@ -27,19 +23,9 @@ import io.sundr.builder.annotations.BuildableReference;
 
 @Group(DecisionConstants.GROUP)
 @Version(DecisionConstants.VERSION)
-@Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
+@Buildable(editableEnabled = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
         @BuildableReference(CustomResource.class)
 })
-public class Decision extends CustomResource<DecisionSpec, DecisionStatus> implements Namespaced {
-
-    @JsonIgnore
-    public OwnerReference getOwnerReference() {
-        return new OwnerReferenceBuilder()
-                .withApiVersion(getApiVersion())
-                .withKind(getKind())
-                .withName(getMetadata().getName())
-                .withUid(getMetadata().getUid())
-                .build();
-    }
+public class DecisionVersion extends CustomResource<DecisionVersionSpec, DecisionVersionStatus> implements Namespaced {
 
 }

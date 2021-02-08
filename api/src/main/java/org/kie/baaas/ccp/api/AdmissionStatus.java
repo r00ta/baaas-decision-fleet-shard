@@ -12,18 +12,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.kie.baaas.ccp.controller.model;
 
-public class DecisionValidationException extends Exception {
+package org.kie.baaas.ccp.api;
 
-    private final String reason;
-
-    public DecisionValidationException(String reason, String message) {
-        super(message);
-        this.reason = reason;
-    }
-
-    public String getReason() {
-        return reason;
-    }
+public enum AdmissionStatus {
+    SUCCESS,
+    REJECTED
 }

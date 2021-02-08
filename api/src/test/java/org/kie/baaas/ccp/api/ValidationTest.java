@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package org.kie.baaas.api;
+package org.kie.baaas.ccp.api;
 
 import java.net.URI;
 
@@ -47,7 +47,7 @@ class ValidationTest {
     void validateDecisionSpec() {
         DecisionSpec spec = new DecisionSpecBuilder().build();
         assertThat(validator.validate(spec), hasSize(1));
-        spec.setDefinition(new DecisionVersionSpec());
+        spec.setDefinition(new DecisionVersionSpecBuilder().build());
         assertThat(validator.validate(spec), hasSize(2));
         spec.getDefinition().setVersion("v1");
         assertThat(validator.validate(spec), hasSize(1));
@@ -63,7 +63,7 @@ class ValidationTest {
                 .withKafka(new KafkaBuilder().build())
                 .build();
         assertThat(validator.validate(spec), hasSize(4));
-        spec.getKafka().setHost("my-kafka.example.com:9092");
+        spec.getKafka().setBootstrapServers("my-kafka.example.com:9092");
         assertThat(validator.validate(spec), hasSize(3));
         spec.getKafka().setSecretName("the-secret");
         assertThat(validator.validate(spec), hasSize(2));

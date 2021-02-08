@@ -13,9 +13,10 @@
  * limitations under the License.
  */
 
-package org.kie.baaas.api;
+package org.kie.baaas.ccp.api;
 
-public enum AdmissionStatus {
-    SUCCESS,
-    REJECTED
+public enum Phase {
+    CURRENT,
+    FAILED,
+    READY
 }

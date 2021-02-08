@@ -13,16 +13,15 @@
  * limitations under the License.
  */
 
-package org.kie.baaas.api;
+package org.kie.baaas.ccp.api;
 
 import java.net.URI;
-import java.util.Collection;
-
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.dekorate.crd.annotation.PrinterColumn;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -32,21 +31,24 @@ import lombok.experimental.Accessors;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
-        "definition",
-        "webhooks"
+        "endpoint",
+        "versionId"
 })
-@Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
+@JsonDeserialize
+@Buildable(editableEnabled = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
 @ToString
 @EqualsAndHashCode
 @Getter
 @Setter
 @Accessors(chain = true)
-public class DecisionSpec {
+public class DecisionStatus {
 
-    @Valid
-    @NotNull
-    private DecisionVersionSpec definition;
-    @Valid
-    private Collection<URI> webhooks;
+    @JsonProperty
+    @PrinterColumn
+    private URI endpoint;
+
+    @JsonProperty
+    @PrinterColumn
+    private String versionId;
 
 }

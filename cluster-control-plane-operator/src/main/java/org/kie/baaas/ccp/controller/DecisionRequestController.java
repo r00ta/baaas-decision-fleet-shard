@@ -16,6 +16,7 @@
 package org.kie.baaas.ccp.controller;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -35,23 +36,23 @@ import io.javaoperatorsdk.operator.api.Controller;
 import io.javaoperatorsdk.operator.api.DeleteControl;
 import io.javaoperatorsdk.operator.api.ResourceController;
 import io.javaoperatorsdk.operator.api.UpdateControl;
-import org.kie.baaas.api.AdmissionStatus;
-import org.kie.baaas.api.Decision;
-import org.kie.baaas.api.DecisionBuilder;
-import org.kie.baaas.api.DecisionConstants;
-import org.kie.baaas.api.DecisionRequest;
-import org.kie.baaas.api.DecisionRequestSpec;
-import org.kie.baaas.api.DecisionRequestStatusBuilder;
-import org.kie.baaas.api.DecisionSpecBuilder;
-import org.kie.baaas.api.DecisionStatus;
-import org.kie.baaas.api.DecisionVersion;
-import org.kie.baaas.api.DecisionVersionRef;
-import org.kie.baaas.api.Phase;
-import org.kie.baaas.ccp.controller.model.DecisionValidationException;
-import org.kie.baaas.ccp.service.DecisionVersionService;
+import org.kie.baaas.ccp.api.AdmissionStatus;
+import org.kie.baaas.ccp.api.Decision;
+import org.kie.baaas.ccp.api.DecisionBuilder;
+import org.kie.baaas.ccp.api.DecisionConstants;
+import org.kie.baaas.ccp.api.DecisionRequest;
+import org.kie.baaas.ccp.api.DecisionRequestSpec;
+import org.kie.baaas.ccp.api.DecisionRequestStatus;
+import org.kie.baaas.ccp.api.DecisionRequestStatusBuilder;
+import org.kie.baaas.ccp.api.DecisionSpecBuilder;
+import org.kie.baaas.ccp.api.DecisionStatus;
+import org.kie.baaas.ccp.api.DecisionVersion;
+import org.kie.baaas.ccp.api.DecisionVersionRef;
+import org.kie.baaas.ccp.model.DecisionValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_FAILED;
 import static org.kie.baaas.ccp.controller.DecisionController.DECISION_LABEL;
 
 @Controller
@@ -60,17 +61,14 @@ public class DecisionRequestController implements ResourceController<DecisionReq
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DecisionRequestController.class);
     private static final String BAAAS_NS_TEMPLATE = "baaas-%s";
-    public static final String DECISION_REQUEST_LABEL = "org.kie.baaas.decisionrequest";
-    public static final String CUSTOMER_LABEL = "org.kie.baaas.customer";
+    public static final String DECISION_REQUEST_LABEL = "org.kie.baaas/decisionrequest";
+    public static final String CUSTOMER_LABEL = "org.kie.baaas/customer";
 
     @Inject
     KubernetesClient kubernetesClient;
 
     @Inject
     Validator validator;
-
-    @Inject
-    DecisionVersionService decisionVersionService;
 
     public DeleteControl deleteResource(DecisionRequest request, Context<DecisionRequest> context) {
         LOGGER.info("Delete DecisionRequest: {} in namespace {}", request.getMetadata().getName(), request.getMetadata().getNamespace());
@@ -128,9 +126,9 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                 .inNamespace(namespace)
                 .withLabel(DECISION_LABEL, spec.getName())
                 .list()
-                .getItems().stream().filter(v -> v.getSpec().getVersion().equals(spec.getDefinition().getVersion())).collect(Collectors.toList());
+                .getItems().stream().filter(v -> Objects.equals(v.getSpec().getVersion(), spec.getDefinition().getVersion())).collect(Collectors.toList());
         for (DecisionVersion v : versions) {
-            if (Phase.FAILED.equals(v.getStatus().isBuildFailed())) {
+            if (REASON_FAILED.equals(v.getStatus().getBuildStatus())) {
                 throw new DecisionValidationException(DecisionConstants.VERSION_BUILD_FAILED, "Requested DecisionVersion build failed");
             }
             if (!v.getSpec().equals(spec.getDefinition())) {
@@ -153,7 +151,7 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                 .withMetadata(new ObjectMetaBuilder()
                         .withName(request.getSpec().getName())
                         .withNamespace(namespace)
-                        .addToLabels(DECISION_REQUEST_LABEL, request.getMetadata().getUid())
+                        .addToLabels(DECISION_REQUEST_LABEL, request.getMetadata().getName())
                         .addToLabels(CUSTOMER_LABEL, request.getSpec().getCustomerId())
                         .build())
                 .withSpec(new DecisionSpecBuilder()
@@ -163,7 +161,7 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                 .withStatus(new DecisionStatus())
                 .build();
         Decision current = kubernetesClient.customResources(Decision.class).inNamespace(namespace).withName(request.getMetadata().getName()).get();
-        if (current == null || !expected.getSpec().equals(current.getSpec())) {
+        if (current == null || !Objects.equals(expected.getSpec(), current.getSpec())) {
             current = kubernetesClient.customResources(Decision.class)
                     .inNamespace(namespace)
                     .withName(expected.getMetadata().getName())
@@ -173,18 +171,15 @@ public class DecisionRequestController implements ResourceController<DecisionReq
     }
 
     private UpdateControl<DecisionRequest> updateSuccessRequestStatus(DecisionRequest request, Decision decision) {
-        if (request.getStatus() == null || (AdmissionStatus.SUCCESS.equals(request.getStatus().getState()) &&
-                decision.getMetadata().getName().equals(request.getStatus().getVersionRef().getName()) &&
-                decision.getMetadata().getNamespace().equals(request.getStatus().getVersionRef().getNamespace()))) {
-            request.setStatus(new DecisionRequestStatusBuilder()
-                    .withState(AdmissionStatus.SUCCESS)
-                    .withVersionRef(new DecisionVersionRef()
-                            .setName(decision.getMetadata().getName())
-                            .setNamespace(decision.getMetadata().getNamespace())
-                            .setVersion(request.getSpec().getDefinition().getVersion()))
-                    .withMessage(null)
-                    .withReason(null)
-                    .build());
+        DecisionRequestStatus expected = new DecisionRequestStatusBuilder()
+                .withState(AdmissionStatus.SUCCESS)
+                .withVersionRef(new DecisionVersionRef()
+                        .setName(decision.getMetadata().getName())
+                        .setNamespace(decision.getMetadata().getNamespace())
+                        .setVersion(request.getSpec().getDefinition().getVersion()))
+                .build();
+        if (request.getStatus() == null || !expected.equals(request.getStatus())) {
+            request.setStatus(expected);
             return UpdateControl.updateStatusSubResource(request);
         }
         return UpdateControl.noUpdate();

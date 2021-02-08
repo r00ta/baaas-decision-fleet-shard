@@ -24,24 +24,23 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
-import org.kie.baaas.api.Webhook;
+import org.kie.baaas.ccp.api.Webhook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @ApplicationScoped
 public class RemoteResourceClient {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RemoteResourceClient.class);
-
     private Client client = ResteasyClientBuilder.newClient();
 
-    public boolean notify(URI path, Webhook event) {
-        Response response = client.target(path).request(MediaType.APPLICATION_JSON).post(Entity.json(event));
+    private static final Logger LOGGER = LoggerFactory.getLogger(RemoteResourceClient.class);
+
+    public void notify(Webhook event, URI uri) {
+        Response response = client.target(uri).request(MediaType.APPLICATION_JSON).post(Entity.json(event));
         if (response.getStatus() < Response.Status.BAD_REQUEST.getStatusCode()) {
-            LOGGER.debug("Successfully emitted webhook to URI: {}", path);
-            return true;
+            LOGGER.debug("Successfully emitted webhook to URI: {}", uri);
+            return;
         }
-        LOGGER.warn("Unable to emit webhook to URI: {}. Received: {}", path, response.getStatus());
-        return false;
+        LOGGER.warn("Unable to emit webhook to URI: {}. Received: {}", uri, response.getStatus());
     }
 }

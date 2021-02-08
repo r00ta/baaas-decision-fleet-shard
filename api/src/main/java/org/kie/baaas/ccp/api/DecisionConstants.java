@@ -13,12 +13,15 @@
  * limitations under the License.
  */
 
-package org.kie.baaas.api;
+package org.kie.baaas.ccp.api;
 
-public enum Phase {
-    BUILDING,
-    CURRENT,
-    FAILED,
-    READY,
-    DELETED
+public interface DecisionConstants {
+
+    String GROUP = "operator.baaas";
+    String VERSION = "v1alpha1";
+    String VALIDATION_ERROR = "ValidationError";
+    String VERSION_BUILD_FAILED = "VersionBuildFailed";
+    String DUPLICATED_VERSION = "DuplicatedVersion";
+    String SERVER_ERROR = "ServerError";
+
 }

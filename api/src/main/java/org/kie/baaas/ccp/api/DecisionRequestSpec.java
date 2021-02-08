@@ -13,45 +13,55 @@
  * limitations under the License.
  */
 
-package org.kie.baaas.api;
+package org.kie.baaas.ccp.api;
 
 import java.net.URI;
-import java.util.Date;
+import java.util.Collection;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.sundr.builder.annotations.Buildable;
+import io.sundr.builder.annotations.BuildableReference;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
 
-
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonPropertyOrder({
+        "customerId",
         "name",
-        "version",
-        "phase",
-        "endpoint",
-        "at",
-        "code",
-        "message"
+        "definition",
+        "webhooks"
 })
-@Buildable(editableEnabled = false, generateBuilderPackage = true, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
+@JsonDeserialize
+@Buildable(editableEnabled = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
+        @BuildableReference(DecisionVersionSpec.class)
+})
 @ToString
 @EqualsAndHashCode
 @Getter
 @Setter
 @Accessors(chain = true)
-public class Webhook {
+public class DecisionRequestSpec {
 
+    @JsonProperty
+    @NotNull
+    private String customerId;
+    @JsonProperty
+    @NotNull
     private String name;
-    private String version;
-    private Phase phase;
-    private URI endpoint;
-    private Date at;
-    private int code;
-    private String message;
+    @JsonProperty
+    @Valid
+    private DecisionVersionSpec definition;
+    @JsonProperty
+    @Valid
+    private Collection<URI> webhooks;
 
 }

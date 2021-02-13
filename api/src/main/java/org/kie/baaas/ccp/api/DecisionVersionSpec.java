@@ -61,6 +61,7 @@ public class DecisionVersionSpec {
     @Valid
     private URI source;
     @JsonProperty
+    @NotNull
     @Valid
     private Kafka kafka;
     @JsonProperty

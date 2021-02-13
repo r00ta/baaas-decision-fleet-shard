@@ -60,6 +60,8 @@ public class DecisionVersionStatus {
 
     public static final String REASON_SUCCESS = "Success";
     public static final String REASON_FAILED = "Failed";
+    public static final String REASON_PENDING = "Pending";
+    public static final String REASON_RUNNING = "Running";
 
     @JsonProperty
     private String pipelineRef;
@@ -124,5 +126,13 @@ public class DecisionVersionStatus {
 
     public Condition getCondition(String key) {
         return conditions.get(key);
+    }
+
+    public String isReady() {
+        Condition readyCondition = getCondition(CONDITION_READY);
+        if (readyCondition == null) {
+            return ResourceUtils.capitalize(Boolean.FALSE);
+        }
+        return readyCondition.getStatus();
     }
 }

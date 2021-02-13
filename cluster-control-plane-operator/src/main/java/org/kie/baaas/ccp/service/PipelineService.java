@@ -14,46 +14,30 @@
  */
 package org.kie.baaas.ccp.service;
 
-import java.io.IOException;
 import java.io.StringReader;
-import java.time.ZonedDateTime;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 import javax.json.Json;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonValue;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
+import io.fabric8.kubernetes.client.utils.Serialization;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionSpec;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import static org.kie.baaas.ccp.controller.DecisionController.DECISION_LABEL;
-import static org.kie.baaas.ccp.controller.DecisionController.DECISION_NAMESPACE_LABEL;
-import static org.kie.baaas.ccp.controller.DecisionRequestController.CUSTOMER_LABEL;
-import static org.kie.baaas.ccp.controller.DecisionVersionController.DECISION_VERSION_LABEL;
-import static org.kie.baaas.ccp.service.JsonResourceUtils.buildParam;
-import static org.kie.baaas.ccp.service.JsonResourceUtils.getCondition;
-import static org.kie.baaas.ccp.service.JsonResourceUtils.getConditions;
-import static org.kie.baaas.ccp.service.JsonResourceUtils.getLabels;
-import static org.kie.baaas.ccp.service.JsonResourceUtils.getName;
-import static org.kie.baaas.ccp.service.JsonResourceUtils.getNamespace;
-import static org.kie.baaas.ccp.service.JsonResourceUtils.getStatus;
+import static org.kie.baaas.ccp.controller.DecisionLabels.BAAAS_RESOURCE_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.BAAAS_RESOURCE_PIPELINE_RUN;
+import static org.kie.baaas.ccp.controller.DecisionLabels.CUSTOMER_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_NAMESPACE_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_VERSION_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.buildEnvValue;
 
 @ApplicationScoped
 public class PipelineService {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(PipelineService.class);
 
     private static final String PIPELINE_REF = "baaas-ccp-decision-build";
     private static final String VAR_POM_CONFIGMAP = "BUILD_INPUT_POM_XML_CONFIGMAP";
@@ -73,17 +57,19 @@ public class PipelineService {
             .withScope("Namespaced")
             .build();
 
-    @Inject
-    KubernetesClient client;
-
-    @Inject
-    DecisionVersionService versionService;
+    public static final String PIPELINE_REASON = "reason";
+    public static final String PIPELINE_MESSAGE = "message";
+    public static final String PIPELINE_REASON_FAILED = "Failed";
+    public static final String PIPELINE_SUCCEEDED = "Succeeded";
+    public static final String PIPELINE_REASON_RUNNING = "Running";
 
     public static String getPipelineRunName(DecisionVersion version) {
         return version.getMetadata().getLabels().get(CUSTOMER_LABEL) + "-" + version.getMetadata().getName();
     }
 
     public static JsonObject buildPipelineRun(String namespace, DecisionVersion version) {
+        JsonArrayBuilder ownerRefs = Json.createArrayBuilder()
+                .add(Json.createReader(new StringReader(Serialization.asJson(version.getOwnerReference()))).readObject());
         return Json.createObjectBuilder()
                 .add("apiVersion", PIPELINE_RUN_CONTEXT.getGroup() + "/" + PIPELINE_RUN_CONTEXT.getVersion())
                 .add("kind", PIPELINE_RUN_CONTEXT.getKind())
@@ -91,20 +77,23 @@ public class PipelineService {
                         .add("name", getPipelineRunName(version))
                         .add("namespace", namespace)
                         .add("labels", Json.createObjectBuilder()
+                                .add(BAAAS_RESOURCE_LABEL, BAAAS_RESOURCE_PIPELINE_RUN)
                                 .add(DECISION_VERSION_LABEL, version.getMetadata().getName())
                                 .add(DECISION_LABEL, version.getMetadata().getLabels().get(DECISION_LABEL))
                                 .add(CUSTOMER_LABEL, version.getMetadata().getLabels().get(CUSTOMER_LABEL))
                                 .add(DECISION_NAMESPACE_LABEL, version.getMetadata().getNamespace())
+                                .add(MANAGED_BY_LABEL, OPERATOR_NAME)
                                 .build())
+                        .add("ownerReferences", ownerRefs)
                         .build())
                 .add("spec", Json.createObjectBuilder()
                         .add("pipelineRef", Json.createObjectBuilder()
                                 .add("name", PIPELINE_REF)
                                 .build())
                         .add("params", Json.createArrayBuilder()
-                                .add(buildParam(VAR_POM_CONFIGMAP, getConfigMapName(version.getSpec())))
-                                .add(buildParam(VAR_DMN_LOCATION, version.getSpec().getSource().toString()))
-                                .add(buildParam(VAR_REGISTRY_LOCATION, buildImageRef(version)))
+                                .add(buildEnvValue(VAR_POM_CONFIGMAP, getConfigMapName(version.getSpec())))
+                                .add(buildEnvValue(VAR_DMN_LOCATION, version.getSpec().getSource().toString()))
+                                .add(buildEnvValue(VAR_REGISTRY_LOCATION, buildImageRef(version)))
                                 .build())
                         .add("podTemplate", Json.createObjectBuilder()
                                 .add("securityContext", Json.createObjectBuilder()
@@ -115,76 +104,8 @@ public class PipelineService {
                 .build();
     }
 
-    public void watchRuns() {
-        try {
-            LOGGER.debug("Registering PipelineRun watcher");
-            client.customResource(PIPELINE_RUN_CONTEXT).watch(client.getNamespace(), new Watcher<>() {
-                @Override
-                public void eventReceived(Action action, String resource) {
-                    if (!action.equals(Action.ADDED) && !action.equals(Action.MODIFIED)) {
-                        LOGGER.debug("Ignore PipelineRun action {}", action);
-                        return;
-                    }
-                    try (JsonReader reader = Json.createReader(new StringReader(resource))) {
-                        JsonObject run = getLatestRun(reader.readObject());
-                        if (run == null) {
-                            return;
-                        }
-                        LOGGER.debug("Updated PipelineRun {}", getName(run));
-                        if (getConditions(run) == null) {
-                            return;
-                        }
-                        JsonObject succeeded = getCondition(run, "Succeeded");
-                        if (succeeded != null) {
-                            JsonObject labels = getLabels(run);
-                            DecisionVersion version = client.customResources(DecisionVersion.class)
-                                    .inNamespace(labels.getString(DECISION_NAMESPACE_LABEL))
-                                    .withName(labels.getString(DECISION_VERSION_LABEL))
-                                    .get();
-                            if (version != null) {
-                                boolean status = Boolean.parseBoolean(succeeded.getString("status"));
-                                if (status) {
-                                    versionService.setBuildCompleted(version, PipelineService.buildImageRef(version));
-                                } else {
-                                    versionService.setBuildStatus(
-                                            version,
-                                            Boolean.FALSE,
-                                            succeeded.getString("reason"),
-                                            succeeded.getString("message")
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-
-
-                @Override
-                public void onClose(WatcherException cause) {
-                    // Do nothing
-                }
-
-            });
-        } catch (IOException e) {
-            LOGGER.error("Unable to watch PipelineRun objects", e);
-        }
-
-    }
-
-    private JsonObject getLatestRun(JsonObject run) {
-        Map<String, String> labels = new HashMap<>();
-        JsonObject labelsObj = getLabels(run);
-        labelsObj.keySet().forEach(k -> labels.put(k, labelsObj.getString(k)));
-        Map<String, Object> runs = client.customResource(PIPELINE_RUN_CONTEXT).list(getNamespace(run), labels);
-        Optional<JsonObject> recent = Json.createObjectBuilder(runs).build().getJsonArray("items")
-                .stream()
-                .map(JsonValue::asJsonObject)
-                .max(Comparator.comparing(r -> PipelineService.getStartTime(r.asJsonObject())));
-        return recent.orElse(null);
-    }
-
     public static String getConfigMapName(DecisionVersionSpec spec) {
-        if (spec.getKafka() != null) {
+        if (spec.getKafka() != null && spec.getKafka().getInputTopic() != null) {
             return KAFKA_POM_XML_CONFIGMAP;
         }
         return POM_XML_CONFIGMAP;
@@ -198,16 +119,4 @@ public class PipelineService {
                 version.getMetadata().getLabels().get(DECISION_LABEL),
                 version.getSpec().getVersion());
     }
-
-    public static ZonedDateTime getStartTime(JsonObject run) {
-        JsonObject status = getStatus(run);
-        if (status == null) {
-            return null;
-        }
-        if (!status.containsKey("startTime")) {
-            return null;
-        }
-        return ZonedDateTime.parse(status.getString("startTime"));
-    }
-
 }

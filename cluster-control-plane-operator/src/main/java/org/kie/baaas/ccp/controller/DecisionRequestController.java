@@ -53,7 +53,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_FAILED;
-import static org.kie.baaas.ccp.controller.DecisionController.DECISION_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.CUSTOMER_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_REQUEST_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
 
 @Controller
 @ApplicationScoped
@@ -61,8 +65,6 @@ public class DecisionRequestController implements ResourceController<DecisionReq
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DecisionRequestController.class);
     private static final String BAAAS_NS_TEMPLATE = "baaas-%s";
-    public static final String DECISION_REQUEST_LABEL = "org.kie.baaas/decisionrequest";
-    public static final String CUSTOMER_LABEL = "org.kie.baaas/customer";
 
     @Inject
     KubernetesClient kubernetesClient;
@@ -128,6 +130,9 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                 .list()
                 .getItems().stream().filter(v -> Objects.equals(v.getSpec().getVersion(), spec.getDefinition().getVersion())).collect(Collectors.toList());
         for (DecisionVersion v : versions) {
+            if (v.getStatus() == null) {
+                return;
+            }
             if (REASON_FAILED.equals(v.getStatus().getBuildStatus())) {
                 throw new DecisionValidationException(DecisionConstants.VERSION_BUILD_FAILED, "Requested DecisionVersion build failed");
             }
@@ -153,6 +158,7 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                         .withNamespace(namespace)
                         .addToLabels(DECISION_REQUEST_LABEL, request.getMetadata().getName())
                         .addToLabels(CUSTOMER_LABEL, request.getSpec().getCustomerId())
+                        .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
                         .build())
                 .withSpec(new DecisionSpecBuilder()
                         .withDefinition(request.getSpec().getDefinition())
@@ -160,9 +166,12 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                         .build())
                 .withStatus(new DecisionStatus())
                 .build();
-        Decision current = kubernetesClient.customResources(Decision.class).inNamespace(namespace).withName(request.getMetadata().getName()).get();
+        Decision current = kubernetesClient.customResources(Decision.class)
+                .inNamespace(namespace)
+                .withName(request.getMetadata().getName())
+                .get();
         if (current == null || !Objects.equals(expected.getSpec(), current.getSpec())) {
-            current = kubernetesClient.customResources(Decision.class)
+            return kubernetesClient.customResources(Decision.class)
                     .inNamespace(namespace)
                     .withName(expected.getMetadata().getName())
                     .createOrReplace(expected);

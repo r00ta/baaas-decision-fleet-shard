@@ -14,7 +14,10 @@
  */
 package org.kie.baaas.ccp.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.fabric8.kubernetes.api.model.Namespaced;
+import io.fabric8.kubernetes.api.model.OwnerReference;
+import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
 import io.fabric8.kubernetes.client.CustomResource;
 import io.fabric8.kubernetes.model.annotation.Group;
 import io.fabric8.kubernetes.model.annotation.Version;
@@ -28,4 +31,19 @@ import io.sundr.builder.annotations.BuildableReference;
 })
 public class DecisionVersion extends CustomResource<DecisionVersionSpec, DecisionVersionStatus> implements Namespaced {
 
+    public DecisionVersion() {
+        super();
+        this.setStatus(new DecisionVersionStatus());
+    }
+
+    @JsonIgnore
+    public OwnerReference getOwnerReference() {
+        return new OwnerReferenceBuilder()
+                .withApiVersion(getApiVersion())
+                .withKind(getKind())
+                .withName(getMetadata().getName())
+                .withUid(getMetadata().getUid())
+                .withController(Boolean.TRUE)
+                .build();
+    }
 }

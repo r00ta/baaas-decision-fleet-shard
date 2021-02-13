@@ -32,6 +32,12 @@ public class JsonResourceUtils {
     private static final String SPEC = "spec";
     private static final String NAMESPACE = "namespace";
     private static final String CONDITIONS = "conditions";
+    private static final String KEY = "key";
+    private static final String SECRET_KEY_REF = "secretKeyRef";
+    private static final String VALUE_FROM = "valueFrom";
+    private static final String UID = "uid";
+    private static final String RESOURCE_VERSION = "resourceVersion";
+    private static final String OWNER_REFERENCES = "ownerReferences";
 
     private JsonResourceUtils() {
     }
@@ -122,7 +128,7 @@ public class JsonResourceUtils {
         JsonObject result = object;
         for (int i = 0; i < path.length - 1; i++) {
             JsonValue value = result.get(path[i]);
-            if(value == null || !JsonValue.ValueType.OBJECT.equals(value.getValueType())) {
+            if (value == null || !JsonValue.ValueType.OBJECT.equals(value.getValueType())) {
                 return null;
             }
             result = value.asJsonObject();
@@ -130,18 +136,55 @@ public class JsonResourceUtils {
         return result.get(path[path.length - 1]);
     }
 
-    public static JsonObject buildParam(String name, String value) {
+    public static JsonObject buildEnvValue(String name, String value) {
         return Json.createObjectBuilder()
                 .add(NAME, name)
                 .add(VALUE, value)
                 .build();
     }
 
+
+    public static JsonObject buildEnvValueFromSecret(String name, String secretName, String secretPropertyName) {
+        return Json.createObjectBuilder()
+                .add(NAME, name)
+                .add(VALUE_FROM, Json.createObjectBuilder()
+                        .add(SECRET_KEY_REF, Json.createObjectBuilder()
+                                .add(KEY, secretName)
+                                .add(NAME, secretPropertyName)
+                                .build())
+                        .build())
+                .build();
+    }
+
     public static JsonObject getSpec(JsonObject object) {
         JsonValue value = get(object, SPEC);
-        if(value == null) {
+        if (value == null) {
             return null;
         }
         return value.asJsonObject();
+    }
+
+    public static String getUID(JsonObject object) {
+        JsonValue value = get(object, METADATA);
+        if (value != null) {
+            return value.asJsonObject().getString(UID);
+        }
+        return null;
+    }
+
+    public static String getResourceVersion(JsonObject object) {
+        JsonValue value = get(object, METADATA);
+        if (value != null) {
+            return value.asJsonObject().getString(RESOURCE_VERSION);
+        }
+        return null;
+    }
+
+    public static String getOwnerUid(JsonObject resource) {
+        JsonValue ownerRefs = get(resource, METADATA, OWNER_REFERENCES);
+        if (ownerRefs == null || ownerRefs.asJsonArray().isEmpty()) {
+            return null;
+        }
+        return ownerRefs.asJsonArray().getJsonObject(0).getString(UID);
     }
 }

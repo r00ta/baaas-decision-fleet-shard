@@ -32,6 +32,11 @@ import io.sundr.builder.annotations.BuildableReference;
 })
 public class Decision extends CustomResource<DecisionSpec, DecisionStatus> implements Namespaced {
 
+    public Decision() {
+        super();
+        this.setStatus(new DecisionStatus());
+    }
+
     @JsonIgnore
     public OwnerReference getOwnerReference() {
         return new OwnerReferenceBuilder()
@@ -39,6 +44,7 @@ public class Decision extends CustomResource<DecisionSpec, DecisionStatus> imple
                 .withKind(getKind())
                 .withName(getMetadata().getName())
                 .withUid(getMetadata().getUid())
+                .withController(Boolean.TRUE)
                 .build();
     }
 

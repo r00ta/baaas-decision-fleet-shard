@@ -93,7 +93,6 @@
             <properties>
                 <quarkus.package.type>native</quarkus.package.type>
             </properties>
-
             <build>
                 <plugins>
                     <plugin>

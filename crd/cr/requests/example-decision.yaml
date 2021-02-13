@@ -6,7 +6,10 @@ spec:
   customerId: kermit
   name: example-decision
   definition:
-    version: 1
+    version: "1"
     source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
+    kafka:
+      bootstrapServers: ruben-kafk--oc-z--vzwdhkz-yetntfrgzpra.kafka.devshift.org:443
+      secretName: baaas-ccp-kafka-auth
   webhooks:
     - http://localhost:18080/callback

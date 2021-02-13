@@ -51,10 +51,8 @@ public class Kafka {
     @NotNull
     private String secretName;
     @JsonProperty
-    @NotNull
     private String inputTopic;
     @JsonProperty
-    @NotNull
     private String outputTopic;
 
 }

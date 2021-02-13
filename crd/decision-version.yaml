@@ -9,6 +9,9 @@ spec:
     listKind: DecisionVersionList
     plural: decisionversions
     singular: decisionversion
+    categories:
+      - all
+      - baaas
   scope: Namespaced
   versions:
     - name: v1alpha1
@@ -29,7 +32,33 @@ spec:
       type: string
       description: Kogito Service status
       JSONPath: .status.conditions[?(@.type=='Service')].reason
-    - name: Current
-      type: string
-      description: Is this the Current Version
-      JSONPath: .status.conditions[?(@.type=='Current')].status
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          type: object
+          required:
+            - version
+            - source
+            - kafka
+          properties:
+            version:
+              type: string
+            source:
+              type: string
+            kafka:
+              type: object
+              required:
+                - bootstrapServers
+                - secretName
+              properties:
+                bootstrapServers:
+                  type: string
+                secretName:
+                  type: string
+                inputTopic:
+                  type: string
+                outputTopic:
+                  type: string
+            env:
+              type: object

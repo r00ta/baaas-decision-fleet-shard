@@ -9,6 +9,9 @@ spec:
     listKind: DecisionList
     plural: decisions
     singular: decision
+    categories:
+      - all
+      - baaas
   scope: Namespaced
   versions:
     - name: v1alpha1
@@ -25,3 +28,43 @@ spec:
       type: string
       description: Decision endpoint
       JSONPath: .status.endpoint
+  validation:
+    openAPIV3Schema:
+      type: object
+      properties:
+        spec:
+          type: object
+          required:
+            - definition
+          properties:
+            definition:
+              type: object
+              required:
+                - version
+                - source
+                - kafka
+              properties:
+                version:
+                  type: string
+                source:
+                  type: string
+                kafka:
+                  type: object
+                  required:
+                    - bootstrapServers
+                    - secretName
+                  properties:
+                    bootstrapServers:
+                      type: string
+                    secretName:
+                      type: string
+                    inputTopic:
+                      type: string
+                    outputTopic:
+                      type: string
+                env:
+                  type: object
+            webhooks:
+              type: array
+              items:
+                type: string

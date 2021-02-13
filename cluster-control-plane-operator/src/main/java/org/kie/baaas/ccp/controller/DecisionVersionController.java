@@ -16,12 +16,16 @@
 package org.kie.baaas.ccp.controller;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.Json;
+import javax.json.JsonArray;
 import javax.json.JsonObject;
+import javax.json.JsonValue;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -33,28 +37,29 @@ import io.javaoperatorsdk.operator.api.UpdateControl;
 import io.javaoperatorsdk.operator.api.config.ControllerConfiguration;
 import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
 import org.kie.baaas.ccp.api.DecisionVersion;
+import org.kie.baaas.ccp.api.ResourceUtils;
 import org.kie.baaas.ccp.service.DecisionVersionService;
 import org.kie.baaas.ccp.service.KogitoService;
 import org.kie.baaas.ccp.service.PipelineService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_BUILD;
-import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_CURRENT;
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_FAILED;
-import static org.kie.baaas.ccp.controller.DecisionController.DECISION_LABEL;
-import static org.kie.baaas.ccp.controller.DecisionController.DECISION_NAMESPACE_LABEL;
-import static org.kie.baaas.ccp.service.JsonResourceUtils.getSpec;
+import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_NAMESPACE_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_VERSION_LABEL;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getCondition;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getName;
 import static org.kie.baaas.ccp.service.KogitoService.KOGITO_RUNTIME_CONTEXT;
+import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_MESSAGE;
+import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_REASON;
 import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_RUN_CONTEXT;
+import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_SUCCEEDED;
 
 @Controller(namespaces = ControllerConfiguration.WATCH_ALL_NAMESPACES_MARKER)
 @ApplicationScoped
 public class DecisionVersionController implements ResourceController<DecisionVersion> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DecisionVersionController.class);
-
-    public static final String DECISION_VERSION_LABEL = "org.kie.baaas/decisionversion";
 
     @Inject
     KubernetesClient kubernetesClient;
@@ -68,36 +73,42 @@ public class DecisionVersionController implements ResourceController<DecisionVer
     @Inject
     KogitoService kogitoService;
 
+    private GenericResourceEventSource kogitoRuntimeEventSource;
+
+    private GenericResourceEventSource pipelineRunEventSource;
+
     @Override
     public void init(EventSourceManager eventSourceManager) {
-        pipelineService.watchRuns();
-        kogitoService.watchRuntimes();
+        this.kogitoRuntimeEventSource = GenericResourceEventSource.createAndRegisterWatch(kubernetesClient, KOGITO_RUNTIME_CONTEXT);
+        this.pipelineRunEventSource = GenericResourceEventSource.createAndRegisterWatch(kubernetesClient, PIPELINE_RUN_CONTEXT);
+        eventSourceManager.registerEventSource("pipeline-run-event-source", this.pipelineRunEventSource);
+        eventSourceManager.registerEventSource("kogito-runtime-event-source", this.kogitoRuntimeEventSource);
     }
 
     public DeleteControl deleteResource(DecisionVersion version, Context<DecisionVersion> context) {
-        LOGGER.info("Create or update DecisionRevision: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
+        LOGGER.info("Create or update DecisionVersion: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
         try {
             kubernetesClient.customResource(PIPELINE_RUN_CONTEXT).delete(kubernetesClient.getNamespace(), PipelineService.getPipelineRunName(version));
         } catch (KubernetesClientException e) {
             if (e.getCode() == 404) {
                 LOGGER.debug("PipelineRun was already deleted. Ignoring");
             } else {
-                LOGGER.error("Unable to clean up PipelineRun for Version: " + version.getMetadata().getName(), e);
+                LOGGER.error("Unable to clean up PipelineRun for Version: {}", version.getMetadata().getName(), e);
             }
         } catch (IOException e) {
-            LOGGER.error("Unable to clean up PipelineRun for Version: " + version.getMetadata().getName(), e);
+            LOGGER.error("Unable to clean up PipelineRun for Version: {}", version.getMetadata().getName(), e);
         }
         return DeleteControl.DEFAULT_DELETE;
     }
 
     public UpdateControl<DecisionVersion> createOrUpdateResource(DecisionVersion version, Context<DecisionVersion> context) {
-        LOGGER.info("Create or update DecisionRevision: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
-        createPipelineRun(version);
-        createKogitoService(version);
-        return UpdateControl.noUpdate();
+        LOGGER.info("Create or update DecisionVersion: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
+        createOrUpdatePipelineRun(version);
+        kogitoService.createOrUpdateService(version);
+        return versionService.updateStatus(version);
     }
 
-    private void createPipelineRun(DecisionVersion version) {
+    private void createOrUpdatePipelineRun(DecisionVersion version) {
         try {
             JsonObject expected = PipelineService.buildPipelineRun(kubernetesClient.getNamespace(), version);
             JsonObject pipelineRuns = Json.createObjectBuilder(kubernetesClient.customResource(PIPELINE_RUN_CONTEXT)
@@ -105,59 +116,46 @@ public class DecisionVersionController implements ResourceController<DecisionVer
                             DECISION_VERSION_LABEL, version.getMetadata().getName(),
                             DECISION_NAMESPACE_LABEL, version.getMetadata().getNamespace())))
                     .build();
-            if (!pipelineRuns.getJsonArray("items").isEmpty()) {
+            JsonArray items = pipelineRuns.getJsonArray("items");
+            JsonObject run = null;
+            if (!items.isEmpty()) {
                 LOGGER.debug("PipelineRun exists for this decisionVersion. Skipping...");
-                return;
+                Optional<JsonValue> recentBuild = items.stream().max(Comparator.comparing(v -> ResourceUtils.fromInstant(v.asJsonObject().getJsonObject("status").getString("startTime"))));
+                if (recentBuild.isPresent()) {
+                    run = recentBuild.get().asJsonObject();
+                }
             }
-            LOGGER.debug("PipelineRun doesn't exist for this decisionVersion. Create it.");
-            kubernetesClient.customResource(PIPELINE_RUN_CONTEXT)
-                    .create(kubernetesClient.getNamespace(), expected.toString());
-            versionService.setPipelineRef(version, expected.getJsonObject("metadata").getString("name"));
+            if (run == null) {
+                LOGGER.debug("PipelineRun doesn't exist for this decisionVersion. Create it.");
+                run = Json.createObjectBuilder(kubernetesClient
+                        .customResource(PIPELINE_RUN_CONTEXT)
+                        .create(kubernetesClient.getNamespace(), expected.toString()))
+                        .build();
+            }
+            updateBuildStatus(version, run);
         } catch (KubernetesClientException | IOException e) {
             LOGGER.warn("Unable to process Pipeline Run", e);
             versionService.setBuildStatus(version, Boolean.FALSE, REASON_FAILED, e.getMessage());
         }
     }
 
-    private void createKogitoService(DecisionVersion version) {
-        if (!isBuilt(version) || !Boolean.parseBoolean(version.getStatus().getCondition(CONDITION_CURRENT).getStatus())) {
+    public void updateBuildStatus(DecisionVersion version, JsonObject pipelineRun) {
+        version.getStatus().setPipelineRef(getName(pipelineRun));
+        JsonObject succeeded = getCondition(pipelineRun, PIPELINE_SUCCEEDED);
+        if (succeeded == null) {
             return;
         }
-        LOGGER.info("Creating Kogito Runtime for version {}", version.getMetadata().getName());
-        JsonObject expected = KogitoService.buildService(version);
-        String name = expected.getJsonObject("metadata").getString("name");
-        JsonObject current = null;
-        try {
-            current = Json.createObjectBuilder(kubernetesClient.customResource(KOGITO_RUNTIME_CONTEXT)
-                    .get(version.getMetadata().getNamespace(), version.getMetadata().getLabels().get(DECISION_LABEL)))
-                    .build();
-        } catch (KubernetesClientException e) {
-            LOGGER.debug("KogitoRuntime {} does not exist. Creating...", name);
-        }
-        if (needsUpdate(expected, current)) {
-            try {
-                kubernetesClient.customResource(KOGITO_RUNTIME_CONTEXT).createOrReplace(version.getMetadata().getNamespace(), expected.toString());
-                versionService.setKogitoSvcRef(version, name);
-            } catch (IOException e) {
-                LOGGER.warn("Unable to process KogitoService", e);
-                versionService.setServiceStatus(version, Boolean.FALSE, REASON_FAILED, e.getMessage());
-            }
+        String reason = succeeded.getString(PIPELINE_REASON);
+        if (PIPELINE_SUCCEEDED.equals(reason)) {
+            versionService.setBuildCompleted(version, PipelineService.buildImageRef(version));
+        } else {
+            versionService.setBuildStatus(
+                    version,
+                    Boolean.FALSE,
+                    succeeded.getString(PIPELINE_REASON),
+                    succeeded.getString(PIPELINE_MESSAGE)
+            );
         }
     }
 
-    private boolean isBuilt(DecisionVersion version) {
-        return version.getStatus() != null
-                && version.getStatus().getCondition(CONDITION_BUILD) != null
-                && Boolean.parseBoolean(version.getStatus().getCondition(CONDITION_BUILD).getStatus());
-    }
-
-    private boolean needsUpdate(JsonObject expected, JsonObject current) {
-        if (current == null) {
-            return true;
-        }
-        JsonObject expectedSpec = getSpec(expected);
-        JsonObject currentSpec = getSpec(current);
-        return !expectedSpec.getString("image").equals(currentSpec.getString("image"))
-                || expectedSpec.getInt("replicas") != currentSpec.getInt("replicas");
-    }
 }

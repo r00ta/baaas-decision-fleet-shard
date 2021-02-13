@@ -28,4 +28,8 @@ import io.sundr.builder.annotations.BuildableReference;
 })
 public class DecisionRequest extends CustomResource<DecisionRequestSpec, DecisionRequestStatus> implements Namespaced {
 
+    public DecisionRequest() {
+        super();
+        this.setStatus(new DecisionRequestStatus());
+    }
 }

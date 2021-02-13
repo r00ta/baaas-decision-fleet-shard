@@ -9,6 +9,9 @@ spec:
     listKind: DecisionRequestList
     plural: decisionrequests
     singular: decisionrequest
+    categories:
+      - all
+      - baaas
   scope: Namespaced
   versions:
     - name: v1alpha1
@@ -21,3 +24,48 @@ spec:
       type: string
       description: Admission status
       JSONPath: .status.state
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          type: object
+          required:
+            - customerId
+            - name
+            - definition
+          properties:
+            customerId:
+              type: string
+            name:
+              type: string
+            definition:
+              type: object
+              required:
+                - version
+                - source
+                - kafka
+              properties:
+                version:
+                  type: string
+                source:
+                  type: string
+                kafka:
+                  type: object
+                  required:
+                    - bootstrapServers
+                    - secretName
+                  properties:
+                    bootstrapServers:
+                      type: string
+                    secretName:
+                      type: string
+                    inputTopic:
+                      type: string
+                    outputTopic:
+                      type: string
+                env:
+                  type: object
+            webhooks:
+              type: array
+              items:
+                type: string

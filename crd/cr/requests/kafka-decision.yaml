@@ -4,16 +4,14 @@ metadata:
   name: kafka-decision
 spec:
   customerId: kermit
-  source: https://raw.githubusercontent.com/kiegroup/kogito-examples/stable/dmn-drools-quarkus-metrics/src/main/resources/org/kie/kogito/examples/LoanEligibility.dmn
-  kafka:
-    bootstrapServers: my-kafka-cluster.example.org:443
-    secretName: my-kafka-cluster-credentials
-    inputTopic: theinput
-    outputTopic: theoutput
-  env:
-    - name: one
-      value: two
-    - name: three
-      value: four
+  name: kafka-decision
+  definition:
+    version: "1"
+    source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
+    kafka:
+      bootstrapServers: ruben-kafk--oc-z--vzwdhkz-yetntfrgzpra.kafka.devshift.org:443
+      secretName: baaas-ccp-kafka-auth
+      inputTopic: theinput
+      outputTopic: theoutput
   webhooks:
-    - http://my-server.example.com/callback?foo
+    - http://localhost:18080/callback

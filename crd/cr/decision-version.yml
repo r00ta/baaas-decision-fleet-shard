@@ -34,6 +34,3 @@ status:
       reason: Running
       status: "False"
       type: Build
-    - lastTransitionTime: "2021-02-08T11:07:39.686795Z"
-      status: "True"
-      type: Current

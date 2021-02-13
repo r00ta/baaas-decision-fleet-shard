@@ -59,6 +59,7 @@ public class DecisionRequestSpec {
     private String name;
     @JsonProperty
     @Valid
+    @NotNull
     private DecisionVersionSpec definition;
     @JsonProperty
     @Valid

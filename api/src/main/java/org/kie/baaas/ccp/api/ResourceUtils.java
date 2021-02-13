@@ -14,6 +14,7 @@
  */
 package org.kie.baaas.ccp.api;
 
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,5 +37,9 @@ public class ResourceUtils {
 
     public static String now() {
         return ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
+    }
+
+    public static ZonedDateTime fromInstant(String instant) {
+        return Instant.parse(instant).atZone(ZoneOffset.UTC);
     }
 }

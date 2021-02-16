@@ -37,7 +37,6 @@ import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
 import org.kie.baaas.ccp.api.Decision;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionBuilder;
-import org.kie.baaas.ccp.service.DecisionVersionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,16 +55,13 @@ public class DecisionController implements ResourceController<Decision> {
     private static final Logger LOGGER = LoggerFactory.getLogger(DecisionController.class);
 
     @Inject
-    KubernetesClient kubernetesClient;
-
-    @Inject
-    DecisionVersionService versionService;
+    KubernetesClient client;
 
     private DecisionVersionEventSource decisionVersionEventSource;
 
     @Override
     public void init(EventSourceManager eventSourceManager) {
-        this.decisionVersionEventSource = DecisionVersionEventSource.createAndRegisterWatch(kubernetesClient);
+        this.decisionVersionEventSource = DecisionVersionEventSource.createAndRegisterWatch(client);
         eventSourceManager.registerEventSource("decision-version-event-source", this.decisionVersionEventSource);
     }
 
@@ -95,7 +91,7 @@ public class DecisionController implements ResourceController<Decision> {
 
         DecisionVersion version;
         try {
-            version = kubernetesClient.customResources(DecisionVersion.class)
+            version = client.customResources(DecisionVersion.class)
                     .inNamespace(namespace)
                     .withName(expected.getMetadata().getName())
                     .get();
@@ -104,13 +100,13 @@ public class DecisionController implements ResourceController<Decision> {
             throw e;
         }
         if (version == null || !Objects.equals(expected.getSpec(), version.getSpec())) {
-            version = kubernetesClient.customResources(DecisionVersion.class)
+            version = client.customResources(DecisionVersion.class)
                     .inNamespace(expected.getMetadata().getNamespace())
                     .createOrReplace(expected);
         }
         if (Boolean.parseBoolean(version.getStatus().isReady())) {
             String kogitoServiceRef = version.getStatus().getKogitoServiceRef();
-            JsonObject kogitoSvc = Json.createObjectBuilder(kubernetesClient
+            JsonObject kogitoSvc = Json.createObjectBuilder(client
                     .customResource(KOGITO_RUNTIME_CONTEXT)
                     .get(namespace, kogitoServiceRef))
                     .build();

@@ -9,7 +9,7 @@ spec:
     version: "1"
     source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
     kafka:
-      bootstrapServers: ruben-kafk--oc-z--vzwdhkz-yetntfrgzpra.kafka.devshift.org:443
+      bootstrapServers: ruben-kafk--ovs-eyepvmzenltefb-tnk-wjf.kafka.devshift.org:443
       secretName: baaas-ccp-kafka-auth
       inputTopic: theinput
       outputTopic: theoutput

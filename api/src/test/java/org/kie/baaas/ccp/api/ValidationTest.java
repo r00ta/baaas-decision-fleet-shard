@@ -42,7 +42,7 @@ class ValidationTest {
         spec.setName("my decision");
         assertThat(validator.validate(spec), hasSize(1));
         spec.setDefinition(new DecisionVersionSpec());
-        assertThat(validator.validate(spec), hasSize(3));
+        assertThat(validator.validate(spec), hasSize(2));
     }
 
     @Test
@@ -50,11 +50,11 @@ class ValidationTest {
         DecisionSpec spec = new DecisionSpecBuilder().build();
         assertThat(validator.validate(spec), hasSize(1));
         spec.setDefinition(new DecisionVersionSpecBuilder().build());
-        assertThat(validator.validate(spec), hasSize(3));
-        spec.getDefinition().setVersion("v1");
         assertThat(validator.validate(spec), hasSize(2));
-        spec.getDefinition().setSource(URI.create("http://example.com"));
+        spec.getDefinition().setVersion("v1");
         assertThat(validator.validate(spec), hasSize(1));
+        spec.getDefinition().setSource(URI.create("http://example.com"));
+        assertThat(validator.validate(spec), empty());
         spec.getDefinition().setKafka(new Kafka());
         assertThat(validator.validate(spec), hasSize(2));
         spec.getDefinition().getKafka().setBootstrapServers("my-kafka.example.com:9092");

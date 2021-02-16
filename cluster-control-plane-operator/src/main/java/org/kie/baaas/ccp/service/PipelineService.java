@@ -14,18 +14,31 @@
  */
 package org.kie.baaas.ccp.service;
 
+import java.io.IOException;
 import java.io.StringReader;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import javax.json.Json;
+import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
+import javax.json.JsonValue;
 
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.fabric8.kubernetes.client.utils.Serialization;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionSpec;
+import org.kie.baaas.ccp.api.ResourceUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_FAILED;
 import static org.kie.baaas.ccp.controller.DecisionLabels.BAAAS_RESOURCE_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.BAAAS_RESOURCE_PIPELINE_RUN;
 import static org.kie.baaas.ccp.controller.DecisionLabels.CUSTOMER_LABEL;
@@ -35,9 +48,13 @@ import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_VERSION_LABEL
 import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.buildEnvValue;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getCondition;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getName;
 
 @ApplicationScoped
 public class PipelineService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PipelineService.class);
 
     private static final String PIPELINE_REF = "baaas-ccp-decision-build";
     private static final String VAR_POM_CONFIGMAP = "BUILD_INPUT_POM_XML_CONFIGMAP";
@@ -57,11 +74,15 @@ public class PipelineService {
             .withScope("Namespaced")
             .build();
 
-    public static final String PIPELINE_REASON = "reason";
-    public static final String PIPELINE_MESSAGE = "message";
-    public static final String PIPELINE_REASON_FAILED = "Failed";
-    public static final String PIPELINE_SUCCEEDED = "Succeeded";
-    public static final String PIPELINE_REASON_RUNNING = "Running";
+    private static final String PIPELINE_REASON = "reason";
+    private static final String PIPELINE_MESSAGE = "message";
+    private static final String PIPELINE_SUCCEEDED = "Succeeded";
+
+    @Inject
+    DecisionVersionService versionService;
+
+    @Inject
+    KubernetesClient client;
 
     public static String getPipelineRunName(DecisionVersion version) {
         return version.getMetadata().getLabels().get(CUSTOMER_LABEL) + "-" + version.getMetadata().getName();
@@ -118,5 +139,55 @@ public class PipelineService {
                 version.getMetadata().getNamespace(),
                 version.getMetadata().getLabels().get(DECISION_LABEL),
                 version.getSpec().getVersion());
+    }
+
+    public void createOrUpdatePipelineRun(DecisionVersion version) {
+        try {
+            JsonObject expected = PipelineService.buildPipelineRun(client.getNamespace(), version);
+            JsonObject pipelineRuns = Json.createObjectBuilder(client.customResource(PIPELINE_RUN_CONTEXT)
+                    .list(client.getNamespace(), Map.of(
+                            DECISION_VERSION_LABEL, version.getMetadata().getName(),
+                            DECISION_NAMESPACE_LABEL, version.getMetadata().getNamespace())))
+                    .build();
+            JsonArray items = pipelineRuns.getJsonArray("items");
+            JsonObject run = null;
+            if (!items.isEmpty()) {
+                LOGGER.debug("PipelineRun exists for this decisionVersion. Skipping...");
+                Optional<JsonValue> recentBuild = items.stream().max(Comparator.comparing(v -> ResourceUtils.fromInstant(v.asJsonObject().getJsonObject("status").getString("startTime"))));
+                if (recentBuild.isPresent()) {
+                    run = recentBuild.get().asJsonObject();
+                }
+            }
+            if (run == null) {
+                LOGGER.debug("PipelineRun doesn't exist for this decisionVersion. Create it.");
+                run = Json.createObjectBuilder(client
+                        .customResource(PIPELINE_RUN_CONTEXT)
+                        .create(client.getNamespace(), expected.toString()))
+                        .build();
+            }
+            updateBuildStatus(version, run);
+        } catch (KubernetesClientException | IOException e) {
+            LOGGER.warn("Unable to process Pipeline Run", e);
+            versionService.setBuildStatus(version, Boolean.FALSE, REASON_FAILED, e.getMessage());
+        }
+    }
+
+    public void updateBuildStatus(DecisionVersion version, JsonObject pipelineRun) {
+        version.getStatus().setPipelineRef(getName(pipelineRun));
+        JsonObject succeeded = getCondition(pipelineRun, PIPELINE_SUCCEEDED);
+        if (succeeded == null) {
+            return;
+        }
+        String reason = succeeded.getString(PIPELINE_REASON);
+        if (PIPELINE_SUCCEEDED.equals(reason)) {
+            versionService.setBuildCompleted(version, PipelineService.buildImageRef(version));
+        } else {
+            versionService.setBuildStatus(
+                    version,
+                    Boolean.FALSE,
+                    succeeded.getString(PIPELINE_REASON),
+                    succeeded.getString(PIPELINE_MESSAGE)
+            );
+        }
     }
 }

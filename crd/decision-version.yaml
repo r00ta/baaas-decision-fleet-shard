@@ -1,4 +1,4 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: decisionversions.operator.baaas
@@ -17,48 +17,47 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-  subresources:
-    status: {}
-  additionalPrinterColumns:
-    - name: Ready
-      type: string
-      description: Ready
-      JSONPath: .status.conditions[?(@.type=='Ready')].status
-    - name: Build
-      type: string
-      description: Build status
-      JSONPath: .status.conditions[?(@.type=='Build')].reason
-    - name: Service
-      type: string
-      description: Kogito Service status
-      JSONPath: .status.conditions[?(@.type=='Service')].reason
-  validation:
-    openAPIV3Schema:
-      properties:
-        spec:
-          type: object
-          required:
-            - version
-            - source
-            - kafka
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Ready
+          type: string
+          description: Ready
+          jsonPath: .status.conditions[?(@.type=='Ready')].status
+        - name: Build
+          type: string
+          description: Build status
+          jsonPath: .status.conditions[?(@.type=='Build')].reason
+        - name: Service
+          type: string
+          description: Kogito Service status
+          jsonPath: .status.conditions[?(@.type=='Service')].reason
+      schema:
+        openAPIV3Schema:
           properties:
-            version:
-              type: string
-            source:
-              type: string
-            kafka:
+            spec:
               type: object
               required:
-                - bootstrapServers
-                - secretName
+                - version
+                - source
               properties:
-                bootstrapServers:
+                version:
                   type: string
-                secretName:
+                source:
                   type: string
-                inputTopic:
-                  type: string
-                outputTopic:
-                  type: string
-            env:
-              type: object
+                kafka:
+                  type: object
+                  required:
+                    - bootstrapServers
+                    - secretName
+                  properties:
+                    bootstrapServers:
+                      type: string
+                    secretName:
+                      type: string
+                    inputTopic:
+                      type: string
+                    outputTopic:
+                      type: string
+                env:
+                  type: object

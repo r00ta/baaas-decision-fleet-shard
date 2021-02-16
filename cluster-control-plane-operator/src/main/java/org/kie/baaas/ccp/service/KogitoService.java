@@ -56,11 +56,22 @@ public class KogitoService {
     private static final Logger LOGGER = LoggerFactory.getLogger(KogitoService.class);
 
     private static final int REPLICAS = 1;
+
+    private static final String BAAAS_DASHBOARD_AUTH_SECRET = "baaas-ccp-kafka-credentials";
+    private static final String BAAAS_DASHBOARD_BOOTSTRAP_SERVERS = "BAAAS_DASHBOARD_BOOTSTRAP_SERVERS";
+    private static final String BAAAS_DASHBOARD_CLIENTID = "BAAAS_DASHBOARD_CLIENTID";
+    private static final String BAAAS_DASHBOARD_CLIENTSECRET = "BAAAS_DASHBOARD_CLIENTSECRET";
+
     private static final String BAAAS_KAFKA_BOOTSTRAP_SERVERS = "BAAAS_KAFKA_BOOTSTRAP_SERVERS";
     private static final String BAAAS_KAFKA_CLIENTID = "BAAAS_KAFKA_CLIENTID";
     private static final String BAAAS_KAFKA_CLIENTSECRET = "BAAAS_KAFKA_CLIENTSECRET";
+
     private static final String BAAAS_KAFKA_INCOMING_TOPIC = "BAAAS_KAFKA_INCOMING_TOPIC";
     private static final String BAAAS_KAFKA_OUTGOING_TOPIC = "BAAAS_KAFKA_OUTGOING_TOPIC";
+
+    private static final String BOOTSTRAP_SERVERS_KEY = "bootstrapservers";
+    private static final String CLIENTID_KEY = "clientid";
+    private static final String CLIENTSECRET_KEY = "clientsecret";
 
 
     public static final CustomResourceDefinitionContext KOGITO_RUNTIME_CONTEXT = new CustomResourceDefinitionContext
@@ -83,25 +94,33 @@ public class KogitoService {
         return version.getMetadata().getLabels().get(DECISION_LABEL);
     }
 
-    public static String getServiceUrl(DecisionVersion version) {
-        return "http://" + getServiceName(version) + ":8080";
-    }
-
     public static JsonObject buildService(DecisionVersion version) {
         JsonObjectBuilder specBuilder = Json.createObjectBuilder()
                 .add("image", version.getStatus().getImageRef())
                 .add("replicas", REPLICAS);
+        JsonArrayBuilder envBuilder = Json.createArrayBuilder()
+                .add(JsonResourceUtils.buildEnvValueFromSecret(
+                        BAAAS_DASHBOARD_BOOTSTRAP_SERVERS,
+                        BOOTSTRAP_SERVERS_KEY,
+                        BAAAS_DASHBOARD_AUTH_SECRET))
+                .add(JsonResourceUtils.buildEnvValueFromSecret(
+                        BAAAS_DASHBOARD_CLIENTID,
+                        CLIENTID_KEY,
+                        BAAAS_DASHBOARD_AUTH_SECRET))
+                .add(JsonResourceUtils.buildEnvValueFromSecret(
+                        BAAAS_DASHBOARD_CLIENTSECRET,
+                        CLIENTSECRET_KEY,
+                        BAAAS_DASHBOARD_AUTH_SECRET));
         if (version.getSpec().getKafka() != null) {
-            JsonArrayBuilder envBuilder = Json.createArrayBuilder();
             specBuilder.add("propertiesConfigMap", version.getMetadata().getName());
             envBuilder
                     .add(JsonResourceUtils.buildEnvValueFromSecret(
                             BAAAS_KAFKA_CLIENTID,
-                            "clientid",
+                            CLIENTID_KEY,
                             getKafkaSecretName(version)))
                     .add(JsonResourceUtils.buildEnvValueFromSecret(
                             BAAAS_KAFKA_CLIENTSECRET,
-                            "clientsecret",
+                            CLIENTSECRET_KEY,
                             getKafkaSecretName(version)))
                     .add(JsonResourceUtils.buildEnvValue(
                             BAAAS_KAFKA_BOOTSTRAP_SERVERS,
@@ -111,13 +130,13 @@ public class KogitoService {
                         BAAAS_KAFKA_INCOMING_TOPIC,
                         version.getSpec().getKafka().getInputTopic()));
             }
-            if (version.getSpec().getKafka().getInputTopic() != null) {
+            if (version.getSpec().getKafka().getOutputTopic() != null) {
                 envBuilder.add(JsonResourceUtils.buildEnvValue(
                         BAAAS_KAFKA_OUTGOING_TOPIC,
                         version.getSpec().getKafka().getOutputTopic()));
             }
-            specBuilder.add("env", envBuilder.build());
         }
+        specBuilder.add("env", envBuilder.build());
         //Kogito Operator requires to own the KogitoRuntime resource.
         version.getMetadata().getOwnerReferences().get(0).setController(false);
         JsonArrayBuilder ownerRefs = Json.createArrayBuilder(Json.createReader(new StringReader(Serialization.asJson(version.getMetadata().getOwnerReferences()))).readArray());
@@ -140,9 +159,9 @@ public class KogitoService {
                 .build();
     }
 
-    public ConfigMap createKafkaConfig(DecisionVersion version) {
+    private ConfigMap createOrUpdateKafkaConfig(DecisionVersion version) {
         ConfigMap expected = client.configMaps()
-                .load(this.getClass().getClassLoader().getResourceAsStream("deployment/kafka-application-config.yaml"))
+                .load(getClass().getResourceAsStream("/deployment/kafka-application-config.yaml"))
                 .get();
         expected.setMetadata(new ObjectMetaBuilder()
                 .withName(version.getMetadata().getName())
@@ -171,12 +190,11 @@ public class KogitoService {
         }
         LOGGER.info("Creating Kogito Runtime for version {}", version.getMetadata().getName());
         JsonObject expected = buildService(version);
+        createOrUpdateDashboardAuthSecret(version.getMetadata().getNamespace());
         if (version.getSpec().getKafka() != null) {
-            createKafkaAuthSecret(version);
-            if (version.getSpec().getKafka().getInputTopic() != null) {
-                ConfigMap kafkaConfig = createKafkaConfig(version);
-                version.getStatus().setConfigRef(kafkaConfig.getMetadata().getName());
-            }
+            createOrUpdateKafkaAuthSecret(version);
+            ConfigMap kafkaConfig = createOrUpdateKafkaConfig(version);
+            version.getStatus().setConfigRef(kafkaConfig.getMetadata().getName());
         }
         String name = JsonResourceUtils.getName(expected);
         JsonObject current = null;
@@ -238,7 +256,7 @@ public class KogitoService {
         return version.getMetadata().getName() + "-kafka-auth";
     }
 
-    private void createKafkaAuthSecret(DecisionVersion version) {
+    private void createOrUpdateKafkaAuthSecret(DecisionVersion version) {
         Secret current = client.secrets()
                 .inNamespace(version.getMetadata().getNamespace())
                 .withName(getKafkaSecretName(version))
@@ -265,6 +283,34 @@ public class KogitoService {
                     .build();
             LOGGER.debug("Create or replace kafka-auth secret {} in {}", expected.getMetadata().getName(), expected.getMetadata().getNamespace());
             client.secrets().inNamespace(version.getMetadata().getNamespace()).createOrReplace(expected);
+        }
+    }
+
+    private void createOrUpdateDashboardAuthSecret(String namespace) {
+        Secret current = client.secrets()
+                .inNamespace(namespace)
+                .withName(BAAAS_DASHBOARD_AUTH_SECRET)
+                .get();
+        // TODO: Replace how credentials are retrieved from a secure vault. For the demo will be a pre-provisioned secret.
+        Secret vault = client.secrets()
+                .inNamespace(client.getNamespace())
+                .withName(BAAAS_DASHBOARD_AUTH_SECRET)
+                .get();
+        if (vault == null) {
+            LOGGER.error("Missing required kafka-auth secret {} in {}", BAAAS_DASHBOARD_AUTH_SECRET, client.getNamespace());
+            return;
+        }
+        if (current == null || !Objects.equals(current.getData(), vault.getData())) {
+            Secret expected = new SecretBuilder()
+                    .withMetadata(new ObjectMetaBuilder()
+                            .withNamespace(namespace)
+                            .withName(BAAAS_DASHBOARD_AUTH_SECRET)
+                            .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
+                            .build())
+                    .withData(vault.getData())
+                    .build();
+            LOGGER.debug("Create or replace kafka-auth secret {} in {}", expected.getMetadata().getName(), expected.getMetadata().getNamespace());
+            client.secrets().inNamespace(namespace).createOrReplace(expected);
         }
     }
 }

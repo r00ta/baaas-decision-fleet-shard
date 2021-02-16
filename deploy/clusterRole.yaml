@@ -1,0 +1,21 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: baaas-ccp-cluster-role
+rules:
+  - verbs: ["get", "list", "create"]
+    resources: ["namespaces"]
+    apiGroups: [""]
+  - verbs: ["get", "list", "create", "update", "delete"]
+    resources: ["configmaps", "secrets"]
+    apiGroups: [""]
+  - verbs: ["get", "list", "update", "create", "watch", "delete"]
+    resources: ["kogitoruntimes"]
+    apiGroups: ["app.kiegroup.org"]
+  - verbs: ["get", "list", "update", "create", "watch", "delete"]
+    resources: ["pipelineruns"]
+    apiGroups: ["tekton.dev"]
+  - verbs: ["get", "list", "delete", "update", "create", "watch"]
+    resources: ["decisions", "decisionrequests", "decisionversions", "decisions/status", "decisionrequests/status", "decisionversions/status"]
+    apiGroups: ["operator.baaas"]

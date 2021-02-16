@@ -24,7 +24,10 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import io.sundr.builder.annotations.Buildable;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
+import lombok.experimental.Accessors;
 
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -44,64 +47,20 @@ import lombok.ToString;
 @Buildable(editableEnabled = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
 @ToString
 @EqualsAndHashCode
+@Getter
+@Setter
+@Accessors(chain = true)
 public class Webhook {
 
-    private final String customer;
-    private final String decision;
-    private final String version;
-    private final Phase phase;
-    private final URI endpoint;
-    private final String message;
-    private final String at;
-    private final String namespace;
+    private String customer;
+    private String decision;
+    private String version;
+    private Phase phase;
+    private URI endpoint;
+    private String message;
+    private String at;
+    private String namespace;
     @JsonProperty("version_resource")
-    private final String versionResource;
+    private String versionResource;
 
-    public Webhook(String customer, String decision, String version, Phase phase, URI endpoint, String message, String at, String namespace, String versionResource) {
-        this.customer = customer;
-        this.decision = decision;
-        this.version = version;
-        this.phase = phase;
-        this.endpoint = endpoint;
-        this.message = message;
-        this.at = at;
-        this.namespace = namespace;
-        this.versionResource = versionResource;
-    }
-
-    public String getCustomer() {
-        return customer;
-    }
-
-    public String getDecision() {
-        return decision;
-    }
-
-    public String getVersion() {
-        return version;
-    }
-
-    public Phase getPhase() {
-        return phase;
-    }
-
-    public URI getEndpoint() {
-        return endpoint;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public String getNamespace() {
-        return namespace;
-    }
-
-    public String getAt() {
-        return at;
-    }
-
-    public String getVersionResource() {
-        return versionResource;
-    }
 }

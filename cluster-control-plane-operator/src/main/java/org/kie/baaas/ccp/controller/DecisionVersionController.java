@@ -16,16 +16,9 @@
 package org.kie.baaas.ccp.controller;
 
 import java.io.IOException;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonObject;
-import javax.json.JsonValue;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -37,23 +30,14 @@ import io.javaoperatorsdk.operator.api.UpdateControl;
 import io.javaoperatorsdk.operator.api.config.ControllerConfiguration;
 import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
 import org.kie.baaas.ccp.api.DecisionVersion;
-import org.kie.baaas.ccp.api.ResourceUtils;
 import org.kie.baaas.ccp.service.DecisionVersionService;
 import org.kie.baaas.ccp.service.KogitoService;
 import org.kie.baaas.ccp.service.PipelineService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_FAILED;
-import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_NAMESPACE_LABEL;
-import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_VERSION_LABEL;
-import static org.kie.baaas.ccp.service.JsonResourceUtils.getCondition;
-import static org.kie.baaas.ccp.service.JsonResourceUtils.getName;
 import static org.kie.baaas.ccp.service.KogitoService.KOGITO_RUNTIME_CONTEXT;
-import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_MESSAGE;
-import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_REASON;
 import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_RUN_CONTEXT;
-import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_SUCCEEDED;
 
 @Controller(namespaces = ControllerConfiguration.WATCH_ALL_NAMESPACES_MARKER)
 @ApplicationScoped
@@ -103,59 +87,8 @@ public class DecisionVersionController implements ResourceController<DecisionVer
 
     public UpdateControl<DecisionVersion> createOrUpdateResource(DecisionVersion version, Context<DecisionVersion> context) {
         LOGGER.info("Create or update DecisionVersion: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
-        createOrUpdatePipelineRun(version);
+        pipelineService.createOrUpdatePipelineRun(version);
         kogitoService.createOrUpdateService(version);
         return versionService.updateStatus(version);
     }
-
-    private void createOrUpdatePipelineRun(DecisionVersion version) {
-        try {
-            JsonObject expected = PipelineService.buildPipelineRun(kubernetesClient.getNamespace(), version);
-            JsonObject pipelineRuns = Json.createObjectBuilder(kubernetesClient.customResource(PIPELINE_RUN_CONTEXT)
-                    .list(kubernetesClient.getNamespace(), Map.of(
-                            DECISION_VERSION_LABEL, version.getMetadata().getName(),
-                            DECISION_NAMESPACE_LABEL, version.getMetadata().getNamespace())))
-                    .build();
-            JsonArray items = pipelineRuns.getJsonArray("items");
-            JsonObject run = null;
-            if (!items.isEmpty()) {
-                LOGGER.debug("PipelineRun exists for this decisionVersion. Skipping...");
-                Optional<JsonValue> recentBuild = items.stream().max(Comparator.comparing(v -> ResourceUtils.fromInstant(v.asJsonObject().getJsonObject("status").getString("startTime"))));
-                if (recentBuild.isPresent()) {
-                    run = recentBuild.get().asJsonObject();
-                }
-            }
-            if (run == null) {
-                LOGGER.debug("PipelineRun doesn't exist for this decisionVersion. Create it.");
-                run = Json.createObjectBuilder(kubernetesClient
-                        .customResource(PIPELINE_RUN_CONTEXT)
-                        .create(kubernetesClient.getNamespace(), expected.toString()))
-                        .build();
-            }
-            updateBuildStatus(version, run);
-        } catch (KubernetesClientException | IOException e) {
-            LOGGER.warn("Unable to process Pipeline Run", e);
-            versionService.setBuildStatus(version, Boolean.FALSE, REASON_FAILED, e.getMessage());
-        }
-    }
-
-    public void updateBuildStatus(DecisionVersion version, JsonObject pipelineRun) {
-        version.getStatus().setPipelineRef(getName(pipelineRun));
-        JsonObject succeeded = getCondition(pipelineRun, PIPELINE_SUCCEEDED);
-        if (succeeded == null) {
-            return;
-        }
-        String reason = succeeded.getString(PIPELINE_REASON);
-        if (PIPELINE_SUCCEEDED.equals(reason)) {
-            versionService.setBuildCompleted(version, PipelineService.buildImageRef(version));
-        } else {
-            versionService.setBuildStatus(
-                    version,
-                    Boolean.FALSE,
-                    succeeded.getString(PIPELINE_REASON),
-                    succeeded.getString(PIPELINE_MESSAGE)
-            );
-        }
-    }
-
 }

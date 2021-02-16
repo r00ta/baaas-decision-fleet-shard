@@ -1,4 +1,4 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: decisionrequests.operator.baaas
@@ -17,55 +17,54 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
-  subresources:
-    status: {}
-  additionalPrinterColumns:
-    - name: Admission
-      type: string
-      description: Admission status
-      JSONPath: .status.state
-  validation:
-    openAPIV3Schema:
-      properties:
-        spec:
-          type: object
-          required:
-            - customerId
-            - name
-            - definition
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Admission
+          type: string
+          description: Admission status
+          jsonPath: .status.state
+      schema:
+        openAPIV3Schema:
           properties:
-            customerId:
-              type: string
-            name:
-              type: string
-            definition:
+            spec:
               type: object
               required:
-                - version
-                - source
-                - kafka
+                - customerId
+                - name
+                - definition
               properties:
-                version:
+                customerId:
                   type: string
-                source:
+                name:
                   type: string
-                kafka:
+                definition:
                   type: object
                   required:
-                    - bootstrapServers
-                    - secretName
+                    - version
+                    - source
                   properties:
-                    bootstrapServers:
+                    version:
                       type: string
-                    secretName:
+                    source:
                       type: string
-                    inputTopic:
-                      type: string
-                    outputTopic:
-                      type: string
-                env:
-                  type: object
-            webhooks:
-              type: array
-              items:
-                type: string
+                    kafka:
+                      type: object
+                      required:
+                        - bootstrapServers
+                        - secretName
+                      properties:
+                        bootstrapServers:
+                          type: string
+                        secretName:
+                          type: string
+                        inputTopic:
+                          type: string
+                        outputTopic:
+                          type: string
+                    env:
+                      type: object
+                webhooks:
+                  type: array
+                  items:
+                    type: string

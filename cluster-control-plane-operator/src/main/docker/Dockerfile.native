@@ -7,11 +7,11 @@
 #
 # Then, build the image with:
 #
-# docker build -f src/main/docker/Dockerfile.native -t quarkus/solution-discovery-api .
+# docker build -f src/main/docker/Dockerfile.native -t quarkus/baaas-cluster-control-plane .
 #
 # Then run the container using:
 #
-# docker run -i --rm -p 8080:8080 quarkus/solution-discovery-api
+# docker run -i --rm -p 8080:8080 quarkus/baaas-cluster-control-plane
 #
 ###
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.1

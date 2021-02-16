@@ -23,6 +23,19 @@
         <dekorate.version>2.0.0.beta8</dekorate.version>
     </properties>
 
+    <distributionManagement>
+        <repository>
+            <id>baaas-repository-engineering</id>
+            <name>BAaaS Nexus Repository</name>
+            <url>https://repository-basic.engineering.redhat.com/nexus/repository/kie-baaas-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>baaas-repository-engineering</id>
+            <name>BAaaS Nexus Repository</name>
+            <url>https://repository-basic.engineering.redhat.com/nexus/repository/kie-baaas-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -141,4 +154,14 @@
         <module>api</module>
         <module>cluster-control-plane-operator</module>
     </modules>
+    <repositories>
+        <repository>
+            <id>BAaaS Nexus Repository</id>
+            <url>https://repository.engineering.redhat.com/repository/kie-baaas/</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>interval:30</updatePolicy>
+            </snapshots>
+        </repository>
+    </repositories>
 </project>

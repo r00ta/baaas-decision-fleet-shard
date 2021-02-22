@@ -53,6 +53,10 @@ public class DecisionVersionEventSource extends AbstractEventSource implements W
 
     @Override
     public void eventReceived(Action action, DecisionVersion resource) {
+        if(eventHandler == null) {
+            LOGGER.warn("Ignoring action {} for resource {}. EventHandler has not yet been initialized.", action, resource);
+            return;
+        }
         LOGGER.info(
                 "Event received for action: {}, DecisionVersion: {} (ready={})",
                 action.name(),

@@ -38,12 +38,17 @@ public class DecisionVersion extends CustomResource<DecisionVersionSpec, Decisio
 
     @JsonIgnore
     public OwnerReference getOwnerReference() {
+        return getOwnerReference(Boolean.TRUE);
+    }
+
+    @JsonIgnore
+    public OwnerReference getOwnerReference(boolean controller) {
         return new OwnerReferenceBuilder()
                 .withApiVersion(getApiVersion())
                 .withKind(getKind())
                 .withName(getMetadata().getName())
                 .withUid(getMetadata().getUid())
-                .withController(Boolean.TRUE)
+                .withController(controller)
                 .build();
     }
 }

@@ -15,13 +15,12 @@
 
 package org.kie.baaas.ccp.controller;
 
-import java.io.IOException;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.javaoperatorsdk.operator.api.Context;
 import io.javaoperatorsdk.operator.api.Controller;
 import io.javaoperatorsdk.operator.api.DeleteControl;
@@ -61,27 +60,23 @@ public class DecisionVersionController implements ResourceController<DecisionVer
 
     private GenericResourceEventSource pipelineRunEventSource;
 
+    private final ReentrantLock lock = new ReentrantLock();
+
     @Override
     public void init(EventSourceManager eventSourceManager) {
-        this.kogitoRuntimeEventSource = GenericResourceEventSource.createAndRegisterWatch(kubernetesClient, KOGITO_RUNTIME_CONTEXT);
-        this.pipelineRunEventSource = GenericResourceEventSource.createAndRegisterWatch(kubernetesClient, PIPELINE_RUN_CONTEXT);
-        eventSourceManager.registerEventSource("pipeline-run-event-source", this.pipelineRunEventSource);
-        eventSourceManager.registerEventSource("kogito-runtime-event-source", this.kogitoRuntimeEventSource);
+        lock.lock();
+        try {
+            this.kogitoRuntimeEventSource = GenericResourceEventSource.createAndRegisterWatch(kubernetesClient, KOGITO_RUNTIME_CONTEXT);
+            eventSourceManager.registerEventSource("pipeline-run-event-source", this.kogitoRuntimeEventSource);
+            this.pipelineRunEventSource = GenericResourceEventSource.createAndRegisterWatch(kubernetesClient, PIPELINE_RUN_CONTEXT);
+            eventSourceManager.registerEventSource("kogito-runtime-event-source", this.pipelineRunEventSource);
+        } finally {
+            lock.unlock();
+        }
     }
 
     public DeleteControl deleteResource(DecisionVersion version, Context<DecisionVersion> context) {
-        LOGGER.info("Create or update DecisionVersion: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
-        try {
-            kubernetesClient.customResource(PIPELINE_RUN_CONTEXT).delete(kubernetesClient.getNamespace(), PipelineService.getPipelineRunName(version));
-        } catch (KubernetesClientException e) {
-            if (e.getCode() == 404) {
-                LOGGER.debug("PipelineRun was already deleted. Ignoring");
-            } else {
-                LOGGER.error("Unable to clean up PipelineRun for Version: {}", version.getMetadata().getName(), e);
-            }
-        } catch (IOException e) {
-            LOGGER.error("Unable to clean up PipelineRun for Version: {}", version.getMetadata().getName(), e);
-        }
+        LOGGER.info("Delete DecisionVersion: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
         return DeleteControl.DEFAULT_DELETE;
     }
 

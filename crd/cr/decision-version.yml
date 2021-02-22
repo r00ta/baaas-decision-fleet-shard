@@ -22,7 +22,6 @@ status:
   pipelineRef: 'reference to the pipeline'
   imageRef: 'reference to the image for this version'
   kogitoServiceRef: ' reference to the KogitoService CRD for this version'
-  configRef: 'reference to the configmap containing application.properties for this version'
   conditions:
     - lastTransitionTime: "2021-02-08T11:07:37.561986Z"
       message: ""

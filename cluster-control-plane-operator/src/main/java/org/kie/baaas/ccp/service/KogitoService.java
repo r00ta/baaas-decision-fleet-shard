@@ -15,7 +15,6 @@
 package org.kie.baaas.ccp.service;
 
 import java.io.IOException;
-import java.io.StringReader;
 import java.util.Objects;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -25,14 +24,12 @@ import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 
-import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
-import io.fabric8.kubernetes.client.utils.Serialization;
 import org.kie.baaas.ccp.api.Decision;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.slf4j.Logger;
@@ -139,7 +136,7 @@ public class KogitoService {
         specBuilder.add("env", envBuilder.build());
         //Kogito Operator requires to own the KogitoRuntime resource.
         version.getMetadata().getOwnerReferences().get(0).setController(false);
-        JsonArrayBuilder ownerRefs = Json.createArrayBuilder(Json.createReader(new StringReader(Serialization.asJson(version.getMetadata().getOwnerReferences()))).readArray());
+        JsonArrayBuilder ownerRefs = Json.createArrayBuilder().add(JsonResourceUtils.toJson(version.getOwnerReference()));
         return Json.createObjectBuilder()
                 .add("apiVersion", KOGITO_RUNTIME_CONTEXT.getGroup() + "/" + KOGITO_RUNTIME_CONTEXT.getVersion())
                 .add("kind", KOGITO_RUNTIME_CONTEXT.getKind())
@@ -148,7 +145,6 @@ public class KogitoService {
                         .add("namespace", version.getMetadata().getNamespace())
                         .add("labels", Json.createObjectBuilder()
                                 .add(BAAAS_RESOURCE_LABEL, BAAAS_RESOURCE_KOGITO_SERVICE)
-                                .add(DECISION_VERSION_LABEL, version.getMetadata().getName())
                                 .add(DECISION_LABEL, version.getMetadata().getLabels().get(DECISION_LABEL))
                                 .add(CUSTOMER_LABEL, version.getMetadata().getLabels().get(CUSTOMER_LABEL))
                                 .add(MANAGED_BY_LABEL, OPERATOR_NAME)
@@ -157,31 +153,6 @@ public class KogitoService {
                         .build())
                 .add("spec", specBuilder.build())
                 .build();
-    }
-
-    private ConfigMap createOrUpdateKafkaConfig(DecisionVersion version) {
-        ConfigMap expected = client.configMaps()
-                .load(getClass().getResourceAsStream("/deployment/kafka-application-config.yaml"))
-                .get();
-        expected.setMetadata(new ObjectMetaBuilder()
-                .withName(version.getMetadata().getName())
-                .addToLabels(DECISION_LABEL, version.getMetadata().getLabels().get(DECISION_LABEL))
-                .addToLabels(DECISION_VERSION_LABEL, version.getMetadata().getName())
-                .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
-                .withOwnerReferences(version.getOwnerReference())
-                .build());
-        ConfigMap current = client.configMaps()
-                .inNamespace(version.getMetadata().getNamespace())
-                .withName(version.getMetadata().getName())
-                .get();
-        if (current != null && Objects.equals(expected.getData(), current.getData())) {
-            LOGGER.debug("Using existing Kafka Config for version {}: {}", version.getMetadata().getName(), current);
-            return current;
-        }
-        LOGGER.debug("Creating or updating Kafka Config for version {}: {}", version.getMetadata().getName(), expected);
-        return client.configMaps()
-                .inNamespace(version.getMetadata().getNamespace())
-                .createOrReplace(expected);
     }
 
     public void createOrUpdateService(DecisionVersion version) {
@@ -193,8 +164,6 @@ public class KogitoService {
         createOrUpdateDashboardAuthSecret(version.getMetadata().getNamespace());
         if (version.getSpec().getKafka() != null) {
             createOrUpdateKafkaAuthSecret(version);
-            ConfigMap kafkaConfig = createOrUpdateKafkaConfig(version);
-            version.getStatus().setConfigRef(kafkaConfig.getMetadata().getName());
         }
         String name = JsonResourceUtils.getName(expected);
         JsonObject current = null;
@@ -207,8 +176,9 @@ public class KogitoService {
         }
         if (needsUpdate(expected, current)) {
             try {
-                client.customResource(KOGITO_RUNTIME_CONTEXT)
-                        .createOrReplace(version.getMetadata().getNamespace(), expected.toString());
+                current = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
+                        .createOrReplace(version.getMetadata().getNamespace(), expected.toString()))
+                        .build();
                 version.getStatus().setKogitoServiceRef(name);
             } catch (IOException e) {
                 LOGGER.warn("Unable to process KogitoService", e);
@@ -227,6 +197,11 @@ public class KogitoService {
         versionService.setServiceStatus(version, status, reason, "");
     }
 
+    private boolean needsUpdate(JsonObject expected, JsonObject current) {
+        return !Objects.equals(getSpec(expected), getSpec(current))
+                || !Objects.equals(JsonResourceUtils.getLabel(expected, DECISION_VERSION_LABEL), JsonResourceUtils.getLabel(current, DECISION_VERSION_LABEL));
+    }
+
     private boolean isBuilt(DecisionVersion version) {
         return version.getStatus() != null
                 && version.getStatus().getCondition(CONDITION_BUILD) != null
@@ -240,16 +215,6 @@ public class KogitoService {
                 .get();
         return decision != null
                 && Objects.equals(decision.getSpec().getDefinition().getVersion(), version.getSpec().getVersion());
-    }
-
-    private boolean needsUpdate(JsonObject expected, JsonObject current) {
-        if (current == null) {
-            return true;
-        }
-        JsonObject expectedSpec = getSpec(expected);
-        JsonObject currentSpec = getSpec(current);
-        return !expectedSpec.getString("image").equals(currentSpec.getString("image"))
-                || expectedSpec.getInt("replicas") != currentSpec.getInt("replicas");
     }
 
     private static String getKafkaSecretName(DecisionVersion version) {

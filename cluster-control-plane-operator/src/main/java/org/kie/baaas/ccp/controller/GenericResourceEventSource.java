@@ -64,24 +64,37 @@ public class GenericResourceEventSource extends AbstractEventSource implements W
 
     @Override
     public void eventReceived(Action action, String resource) {
+        if (eventHandler == null) {
+            LOGGER.warn("Ignoring action {} for resource {}. EventHandler has not yet been initialized.", action, resource);
+            return;
+        }
         try (JsonReader reader = Json.createReader(new StringReader(resource))) {
-            JsonObject runtime = reader.readObject();
+            JsonObject object = reader.readObject();
             LOGGER.info(
                     "Event received for action: {}, {}: {}",
                     action.name(),
                     context.getName(),
-                    JsonResourceUtils.getName(runtime));
+                    JsonResourceUtils.getName(object));
 
             if (action == Action.ERROR) {
                 LOGGER.warn(
                         "Skipping {} event for {} uid: {}, version: {}",
                         action,
                         context.getName(),
-                        JsonResourceUtils.getUID(runtime),
-                        JsonResourceUtils.getResourceVersion(runtime));
+                        JsonResourceUtils.getUID(object),
+                        JsonResourceUtils.getResourceVersion(object));
                 return;
             }
-            eventHandler.handleEvent(new GenericResourceEvent(action, runtime, this));
+            if (JsonResourceUtils.getOwnerUid(object) == null) {
+                LOGGER.info("Ignoring event for not owned resource {} uid: {}", context.getName(), JsonResourceUtils.getUID(object));
+                return;
+            }
+            LOGGER.debug("Handling event for {} uid: {}, ownerUid: {}, version: {}",
+                    context.getName(),
+                    JsonResourceUtils.getUID(object),
+                    JsonResourceUtils.getOwnerUid(object),
+                    JsonResourceUtils.getResourceVersion(object));
+            eventHandler.handleEvent(new GenericResourceEvent(action, object, this));
         }
     }
 

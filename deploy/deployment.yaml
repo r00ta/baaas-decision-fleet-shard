@@ -1,21 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cluster-control-plane
+  name: cluster-cp
 spec:
   selector:
     matchLabels:
-      app: cluster-control-plane
+      app: cluster-cp
   replicas: 1
   template:
     metadata:
       labels:
-        app: cluster-control-plane
+        app: cluster-cp
     spec:
-      serviceAccountName: cluster-control-plane
+      serviceAccountName: cluster-cp
       containers:
         - image: quay.io/ruben/baaas-cluster-control-plane:latest
           imagePullPolicy: Always
-          name: cluster-control-plane
-          ports:
-            - containerPort: 8080
+          name: cluster-cp

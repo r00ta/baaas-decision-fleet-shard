@@ -70,9 +70,6 @@ public class DecisionVersionStatus {
     private String imageRef;
     @JsonProperty
     private String kogitoServiceRef;
-    //ConfigMap name where the application.properties are stored
-    @JsonProperty
-    private String configRef;
 
     @JsonIgnore
     private Map<String, Condition> conditions = new HashMap<>();

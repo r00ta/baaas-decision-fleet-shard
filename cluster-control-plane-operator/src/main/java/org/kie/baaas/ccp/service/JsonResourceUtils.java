@@ -14,12 +14,15 @@
  */
 package org.kie.baaas.ccp.service;
 
+import java.io.StringReader;
 import java.util.Optional;
 
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
+
+import io.fabric8.kubernetes.client.utils.Serialization;
 
 public class JsonResourceUtils {
 
@@ -186,5 +189,9 @@ public class JsonResourceUtils {
             return null;
         }
         return ownerRefs.asJsonArray().getJsonObject(0).getString(UID);
+    }
+
+    public static JsonObject toJson(Object object) {
+        return Json.createReader(new StringReader(Serialization.asJson(object))).readObject();
     }
 }

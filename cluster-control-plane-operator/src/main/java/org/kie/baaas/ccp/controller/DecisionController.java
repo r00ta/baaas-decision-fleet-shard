@@ -37,6 +37,8 @@ import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
 import org.kie.baaas.ccp.api.Decision;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionBuilder;
+import org.kie.baaas.ccp.service.DecisionVersionService;
+import org.kie.baaas.ccp.service.KogitoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,12 +59,15 @@ public class DecisionController implements ResourceController<Decision> {
     @Inject
     KubernetesClient client;
 
-    private DecisionVersionEventSource decisionVersionEventSource;
+    @Inject
+    KogitoService kogitoService;
+
+    @Inject
+    DecisionVersionService versionService;
 
     @Override
     public void init(EventSourceManager eventSourceManager) {
-        this.decisionVersionEventSource = DecisionVersionEventSource.createAndRegisterWatch(client);
-        eventSourceManager.registerEventSource("decision-version-event-source", this.decisionVersionEventSource);
+        eventSourceManager.registerEventSource("decision-version-event-source", DecisionVersionEventSource.createAndRegisterWatch(client));
     }
 
     public DeleteControl deleteResource(Decision decision, Context<Decision> context) {
@@ -106,15 +111,30 @@ public class DecisionController implements ResourceController<Decision> {
         }
         if (Boolean.parseBoolean(version.getStatus().isReady())) {
             String kogitoServiceRef = version.getStatus().getKogitoServiceRef();
-            JsonObject kogitoSvc = Json.createObjectBuilder(client
-                    .customResource(KOGITO_RUNTIME_CONTEXT)
-                    .get(namespace, kogitoServiceRef))
-                    .build();
-            boolean deployed = getConditionStatus(kogitoSvc, "Deployed");
-            if (deployed) {
-                decision.getStatus().setEndpoint(URI.create(getStatus(kogitoSvc).getString("externalURI")));
-                decision.getStatus().setVersionId(version.getSpec().getVersion());
-                return UpdateControl.updateStatusSubResource(decision);
+            try {
+                JsonObject kogitoSvc = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
+                        .get(namespace, kogitoServiceRef)).build();
+                if (!Objects.equals(decision.getStatus().getVersionId(), version.getSpec().getVersion())) {
+                    kogitoService.createOrUpdateService(version);
+                    UpdateControl<DecisionVersion> updateStatus = versionService.updateStatus(version);
+                    if (updateStatus.isUpdateStatusSubResource()) {
+                        version = client.customResources(DecisionVersion.class)
+                                .inNamespace(version.getMetadata().getNamespace())
+                                .updateStatus(updateStatus.getCustomResource());
+                    }
+                }
+                boolean deployed = getConditionStatus(kogitoSvc, "Deployed");
+                if (deployed) {
+                    decision.getStatus().setEndpoint(URI.create(getStatus(kogitoSvc).getString("externalURI")));
+                    decision.getStatus().setVersionId(version.getSpec().getVersion());
+                    return UpdateControl.updateStatusSubResource(decision);
+                }
+            } catch (KubernetesClientException e) {
+                LOGGER.error("Unable to retrieve KogitoRuntime. Removing reference from DecisionVersion {}", version.getMetadata().getName(), e);
+                version.getStatus().setKogitoServiceRef(null);
+                client.customResources(DecisionVersion.class)
+                        .inNamespace(version.getMetadata().getNamespace())
+                        .updateStatus(version);
             }
         }
         return UpdateControl.noUpdate();

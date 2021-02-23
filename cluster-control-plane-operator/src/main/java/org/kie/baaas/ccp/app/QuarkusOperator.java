@@ -15,30 +15,12 @@
 
 package org.kie.baaas.ccp.app;
 
-import javax.inject.Inject;
-
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.javaoperatorsdk.operator.Operator;
-import io.javaoperatorsdk.operator.api.config.ConfigurationService;
 import io.quarkus.runtime.Quarkus;
 import io.quarkus.runtime.QuarkusApplication;
 import io.quarkus.runtime.annotations.QuarkusMain;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @QuarkusMain
 public class QuarkusOperator implements QuarkusApplication {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(QuarkusOperator.class);
-
-    @Inject
-    KubernetesClient client;
-
-    @Inject
-    Operator operator;
-
-    @Inject
-    ConfigurationService configuration;
 
     public static void main(String... args) {
         Quarkus.run(QuarkusOperator.class, args);

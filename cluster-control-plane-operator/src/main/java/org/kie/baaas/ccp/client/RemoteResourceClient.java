@@ -16,6 +16,8 @@
 package org.kie.baaas.ccp.client;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.concurrent.CompletableFuture;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.ws.rs.client.Client;
@@ -24,9 +26,18 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
+import org.kie.baaas.ccp.api.Decision;
+import org.kie.baaas.ccp.api.DecisionRequest;
+import org.kie.baaas.ccp.api.DecisionVersion;
+import org.kie.baaas.ccp.api.Phase;
+import org.kie.baaas.ccp.api.ResourceUtils;
 import org.kie.baaas.ccp.api.Webhook;
+import org.kie.baaas.ccp.api.WebhookBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.kie.baaas.ccp.controller.DecisionLabels.CUSTOMER_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_LABEL;
 
 @ApplicationScoped
 public class RemoteResourceClient {
@@ -35,12 +46,60 @@ public class RemoteResourceClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RemoteResourceClient.class);
 
-    public void notify(Webhook event, URI uri) {
-        Response response = client.target(uri).request(MediaType.APPLICATION_JSON).post(Entity.json(event));
-        if (response.getStatus() < Response.Status.BAD_REQUEST.getStatusCode()) {
-            LOGGER.debug("Successfully emitted webhook to URI: {}", uri);
+    public void notify(DecisionRequest request, String message, Phase phase) {
+        CompletableFuture.runAsync(() -> {
+            Webhook webhook = new WebhookBuilder().withCustomer(request.getSpec().getCustomerId())
+                    .withDecision(request.getSpec().getName())
+                    .withAt(ResourceUtils.now())
+                    .withMessage(message)
+                    .withPhase(phase)
+                    .build();
+            notify(webhook, request.getSpec().getWebhooks());
+        });
+    }
+
+    public void notify(Decision decision, String versionResource, String message, Phase phase) {
+        CompletableFuture.runAsync(() -> {
+            Webhook webhook = new WebhookBuilder().withCustomer(decision.getMetadata().getLabels().get(CUSTOMER_LABEL))
+                    .withDecision(decision.getMetadata().getName())
+                    .withAt(ResourceUtils.now())
+                    .withMessage(message)
+                    .withNamespace(decision.getMetadata().getNamespace())
+                    .withPhase(phase)
+                    .withVersionResource(versionResource)
+                    .withVersion(decision.getStatus().getVersionId())
+                    .withEndpoint(decision.getStatus().getEndpoint())
+                    .build();
+            notify(webhook, decision.getSpec().getWebhooks());
+        });
+    }
+
+    public void notify(DecisionVersion version, Collection<URI> webhooks, String message, Phase phase) {
+        CompletableFuture.runAsync(() -> {
+            Webhook webhook = new WebhookBuilder().withCustomer(version.getMetadata().getLabels().get(CUSTOMER_LABEL))
+                    .withDecision(version.getMetadata().getLabels().get(DECISION_LABEL))
+                    .withAt(ResourceUtils.now())
+                    .withMessage(message)
+                    .withVersion(version.getSpec().getVersion())
+                    .withNamespace(version.getMetadata().getNamespace())
+                    .withVersionResource(version.getMetadata().getName())
+                    .withPhase(phase)
+                    .build();
+            notify(webhook, webhooks);
+        });
+    }
+
+    private void notify(Webhook event, Collection<URI> endpoints) {
+        if (endpoints == null) {
             return;
         }
-        LOGGER.warn("Unable to emit webhook to URI: {}. Received: {}", uri, response.getStatus());
+        endpoints.forEach(e -> {
+            Response response = client.target(e).request(MediaType.APPLICATION_JSON).post(Entity.json(event));
+            if (response.getStatus() < Response.Status.BAD_REQUEST.getStatusCode()) {
+                LOGGER.debug("Successfully emitted webhook to URI: {}", e);
+                return;
+            }
+            LOGGER.warn("Unable to emit webhook to URI: {}. Received: {}", e, response.getStatus());
+        });
     }
 }

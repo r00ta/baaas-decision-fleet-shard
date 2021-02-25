@@ -45,9 +45,10 @@ import org.kie.baaas.ccp.api.DecisionRequestSpec;
 import org.kie.baaas.ccp.api.DecisionRequestStatus;
 import org.kie.baaas.ccp.api.DecisionRequestStatusBuilder;
 import org.kie.baaas.ccp.api.DecisionSpecBuilder;
-import org.kie.baaas.ccp.api.DecisionStatus;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionRef;
+import org.kie.baaas.ccp.api.Phase;
+import org.kie.baaas.ccp.client.RemoteResourceClient;
 import org.kie.baaas.ccp.model.DecisionValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +71,9 @@ public class DecisionRequestController implements ResourceController<DecisionReq
     KubernetesClient kubernetesClient;
 
     @Inject
+    RemoteResourceClient resourceClient;
+
+    @Inject
     Validator validator;
 
     public DeleteControl deleteResource(DecisionRequest request, Context<DecisionRequest> context) {
@@ -88,6 +92,7 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                     .withMessage(e.getMessage())
                     .withState(AdmissionStatus.REJECTED)
                     .build());
+            resourceClient.notify(request, e.getMessage(), Phase.FAILED);
             return UpdateControl.updateStatusSubResource(request);
         }
         try {
@@ -99,6 +104,7 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                     .withMessage(e.getMessage())
                     .withState(AdmissionStatus.REJECTED)
                     .build());
+            resourceClient.notify(request, e.getMessage(), Phase.FAILED);
             return UpdateControl.updateStatusSubResource(request);
         }
     }
@@ -130,9 +136,6 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                 .list()
                 .getItems().stream().filter(v -> Objects.equals(v.getSpec().getVersion(), spec.getDefinition().getVersion())).collect(Collectors.toList());
         for (DecisionVersion v : versions) {
-            if (v.getStatus() == null) {
-                return;
-            }
             if (REASON_FAILED.equals(v.getStatus().getBuildStatus())) {
                 throw new DecisionValidationException(DecisionConstants.VERSION_BUILD_FAILED, "Requested DecisionVersion build failed");
             }
@@ -164,11 +167,10 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                         .withDefinition(request.getSpec().getDefinition())
                         .withWebhooks(request.getSpec().getWebhooks())
                         .build())
-                .withStatus(new DecisionStatus())
                 .build();
         Decision current = kubernetesClient.customResources(Decision.class)
                 .inNamespace(namespace)
-                .withName(request.getMetadata().getName())
+                .withName(request.getSpec().getName())
                 .get();
         if (current == null || !Objects.equals(expected.getSpec(), current.getSpec())) {
             return kubernetesClient.customResources(Decision.class)
@@ -193,5 +195,4 @@ public class DecisionRequestController implements ResourceController<DecisionReq
         }
         return UpdateControl.noUpdate();
     }
-
 }

@@ -56,12 +56,9 @@ public class DecisionVersionStatus {
     public static final String CONDITION_BUILD = "Build";
     public static final String CONDITION_SERVICE = "Service";
     public static final String CONDITION_READY = "Ready";
-    public static final String CONDITION_CURRENT = "Current";
 
     public static final String REASON_SUCCESS = "Success";
     public static final String REASON_FAILED = "Failed";
-    public static final String REASON_PENDING = "Pending";
-    public static final String REASON_RUNNING = "Running";
 
     @JsonProperty
     private String pipelineRef;
@@ -76,10 +73,6 @@ public class DecisionVersionStatus {
 
     public DecisionVersionStatus setReady(Boolean ready) {
         return setCondition(CONDITION_READY, ready, "", "");
-    }
-
-    public DecisionVersionStatus setCurrent(Boolean current) {
-        return setCondition(CONDITION_CURRENT, current, "", "");
     }
 
     private DecisionVersionStatus setCondition(String type, Boolean status, String reason, String message) {

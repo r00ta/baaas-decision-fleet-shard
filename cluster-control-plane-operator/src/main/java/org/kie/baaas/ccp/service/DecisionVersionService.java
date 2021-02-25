@@ -16,7 +16,6 @@ package org.kie.baaas.ccp.service;
 
 import java.util.Date;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -30,21 +29,15 @@ import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionStatus;
 import org.kie.baaas.ccp.api.Phase;
 import org.kie.baaas.ccp.api.ResourceUtils;
-import org.kie.baaas.ccp.api.Webhook;
-import org.kie.baaas.ccp.api.WebhookBuilder;
 import org.kie.baaas.ccp.client.RemoteResourceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_BUILD;
-import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_CURRENT;
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_READY;
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_SERVICE;
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_FAILED;
-import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_PENDING;
-import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_RUNNING;
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_SUCCESS;
-import static org.kie.baaas.ccp.controller.DecisionLabels.CUSTOMER_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_LABEL;
 
 @ApplicationScoped
@@ -128,41 +121,9 @@ public class DecisionVersionService {
         version.getStatus().getConditionValues()
                 .stream()
                 .filter(c -> currentStatus == null || !Objects.equals(c, currentStatus.getCondition(c.getType())))
-                .filter(c -> !REASON_PENDING.equals(c.getReason()) && !REASON_RUNNING.equals(c.getReason()))
-                .forEach(c -> notify(c, version, decision));
+                .filter(c -> REASON_FAILED.equals(c.getReason()))
+                .forEach(c -> resourceClient.notify(version, decision.getSpec().getWebhooks(), c.getMessage(), Phase.FAILED));
         current.setStatus(version.getStatus());
         return UpdateControl.updateStatusSubResource(current);
-
     }
-
-    private void notify(Condition condition, DecisionVersion version, Decision decision) {
-        if (decision == null || decision.getSpec().getWebhooks() == null || decision.getSpec().getWebhooks().isEmpty()) {
-            return;
-        }
-        if (CONDITION_CURRENT.equals(condition.getType()) || (CONDITION_READY.equals(condition.getType()) && !Boolean.parseBoolean(condition.getStatus()))) {
-            return;
-        }
-        CompletableFuture.runAsync(() -> {
-            WebhookBuilder webhookBuilder = new WebhookBuilder().withCustomer(version.getMetadata().getLabels().get(CUSTOMER_LABEL))
-                    .withDecision(version.getMetadata().getLabels().get(DECISION_LABEL))
-                    .withVersion(version.getSpec().getVersion())
-                    .withNamespace(version.getMetadata().getNamespace())
-                    .withVersionResource(version.getMetadata().getName())
-                    .withAt(ResourceUtils.now())
-                    .withMessage(condition.getMessage());
-
-            if (CONDITION_READY.equals(condition.getType())) {
-                Phase phase = Phase.READY;
-                if (Boolean.parseBoolean(version.getStatus().getCondition(CONDITION_CURRENT).getStatus())) {
-                    phase = Phase.CURRENT;
-                }
-                webhookBuilder.withPhase(phase).withEndpoint(decision.getStatus().getEndpoint());
-            } else if (REASON_FAILED.equals(condition.getReason())) {
-                webhookBuilder.withPhase(Phase.FAILED);
-            }
-            Webhook webhook = webhookBuilder.build();
-            decision.getSpec().getWebhooks().forEach(u -> resourceClient.notify(webhook, u));
-        });
-    }
-
 }

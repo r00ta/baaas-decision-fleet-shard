@@ -32,12 +32,15 @@ public class KubernetesClientProducer {
 
     private final KubernetesServer mockServer;
 
+    private final KubernetesClient client;
+
     public KubernetesClientProducer() {
         List<CustomResourceDefinitionContext> crds = new ArrayList<>();
         crds.add(KOGITO_RUNTIME_CONTEXT);
         crds.add(PIPELINE_RUN_CONTEXT);
         this.mockServer = new KubernetesServer(false, true, crds);
         this.mockServer.before();
+        this.client = mockServer.getClient();
     }
 
     @Produces
@@ -46,8 +49,8 @@ public class KubernetesClientProducer {
     }
 
     @Produces
-    public KubernetesClient getClient() {
-        return mockServer.getClient();
+    KubernetesClient getClient() {
+        return client;
     }
 
 }

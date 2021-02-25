@@ -3,9 +3,10 @@ kind: DecisionRequest
 metadata:
   name: bad-decision-request
 spec:
-  name: bad-decision
+  name: Traffic-Violation
+  customerId: kermit
   definition:
     version: "1"
     source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
   webhooks:
-    - http://my-server.example.com/callback?foo
+    - http://localhost:18080/callback

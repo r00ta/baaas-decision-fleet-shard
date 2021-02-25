@@ -17,6 +17,5 @@ package org.kie.baaas.ccp.api;
 
 public enum Phase {
     CURRENT,
-    FAILED,
-    READY
+    FAILED
 }

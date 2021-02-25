@@ -12,28 +12,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.kie.baaas.ccp.model;
 
-package org.kie.baaas.ccp.app;
+import java.util.Map;
 
-import javax.inject.Inject;
+import io.fabric8.kubernetes.api.model.Namespaced;
+import io.fabric8.kubernetes.client.CustomResource;
+import io.fabric8.kubernetes.model.annotation.Group;
+import io.fabric8.kubernetes.model.annotation.Version;
 
-import io.javaoperatorsdk.operator.Operator;
-import io.quarkus.runtime.Quarkus;
-import io.quarkus.runtime.QuarkusApplication;
-import io.quarkus.runtime.annotations.QuarkusMain;
-
-@QuarkusMain
-public class QuarkusOperator implements QuarkusApplication {
-
-    @Inject
-    Operator operator;
-
-    public static void main(String... args) {
-        Quarkus.run(QuarkusOperator.class, args);
-    }
-
-    public int run(String... args) {
-        Quarkus.waitForExit();
-        return 0;
-    }
+@Group("app.kiegroup.org")
+@Version("v1beta1")
+public class KogitoRuntime extends CustomResource<Map<String, Object>, Map<String, Object>> implements Namespaced {
 }

@@ -21,6 +21,7 @@
         <hamcrest.version>2.2</hamcrest.version>
         <lombok.version>1.18.16</lombok.version>
         <dekorate.version>2.0.0.beta8</dekorate.version>
+        <wiremock.version>2.27.2</wiremock.version>
     </properties>
 
     <distributionManagement>

@@ -26,7 +26,6 @@ import javax.json.JsonObject;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
-import io.fabric8.kubernetes.client.utils.KubernetesResourceUtil;
 import io.javaoperatorsdk.operator.api.Context;
 import io.javaoperatorsdk.operator.api.Controller;
 import io.javaoperatorsdk.operator.api.DeleteControl;
@@ -37,11 +36,14 @@ import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
 import org.kie.baaas.ccp.api.Decision;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionBuilder;
+import org.kie.baaas.ccp.api.Phase;
+import org.kie.baaas.ccp.client.RemoteResourceClient;
 import org.kie.baaas.ccp.service.DecisionVersionService;
 import org.kie.baaas.ccp.service.KogitoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static io.fabric8.kubernetes.client.utils.KubernetesResourceUtil.getNamespace;
 import static org.kie.baaas.ccp.controller.DecisionLabels.CUSTOMER_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
@@ -65,6 +67,9 @@ public class DecisionController implements ResourceController<Decision> {
     @Inject
     DecisionVersionService versionService;
 
+    @Inject
+    RemoteResourceClient resourceClient;
+
     @Override
     public void init(EventSourceManager eventSourceManager) {
         eventSourceManager.registerEventSource("decision-version-event-source", DecisionVersionEventSource.createAndRegisterWatch(client));
@@ -81,7 +86,7 @@ public class DecisionController implements ResourceController<Decision> {
     }
 
     private UpdateControl<Decision> createOrUpdateDecisionVersion(Decision decision) {
-        String namespace = KubernetesResourceUtil.getNamespace(decision);
+        String namespace = getNamespace(decision);
         DecisionVersion expected = new DecisionVersionBuilder()
                 .withMetadata(new ObjectMetaBuilder()
                         .withName(decision.getMetadata().getName() + "-" + decision.getSpec().getDefinition().getVersion())
@@ -106,14 +111,13 @@ public class DecisionController implements ResourceController<Decision> {
         }
         if (version == null || !Objects.equals(expected.getSpec(), version.getSpec())) {
             version = client.customResources(DecisionVersion.class)
-                    .inNamespace(expected.getMetadata().getNamespace())
+                    .inNamespace(namespace)
                     .createOrReplace(expected);
         }
         if (Boolean.parseBoolean(version.getStatus().isReady())) {
-            String kogitoServiceRef = version.getStatus().getKogitoServiceRef();
             try {
-                JsonObject kogitoSvc = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
-                        .get(namespace, kogitoServiceRef)).build();
+                JsonObject kogitoRuntime = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
+                        .get(namespace, version.getStatus().getKogitoServiceRef())).build();
                 if (!Objects.equals(decision.getStatus().getVersionId(), version.getSpec().getVersion())) {
                     kogitoService.createOrUpdateService(version);
                     UpdateControl<DecisionVersion> updateStatus = versionService.updateStatus(version);
@@ -123,10 +127,11 @@ public class DecisionController implements ResourceController<Decision> {
                                 .updateStatus(updateStatus.getCustomResource());
                     }
                 }
-                boolean deployed = getConditionStatus(kogitoSvc, "Deployed");
+                boolean deployed = getConditionStatus(kogitoRuntime, "Deployed");
                 if (deployed) {
-                    decision.getStatus().setEndpoint(URI.create(getStatus(kogitoSvc).getString("externalURI")));
+                    decision.getStatus().setEndpoint(URI.create(getStatus(kogitoRuntime).getString("externalURI")));
                     decision.getStatus().setVersionId(version.getSpec().getVersion());
+                    resourceClient.notify(decision, version.getMetadata().getName(), null, Phase.CURRENT);
                     return UpdateControl.updateStatusSubResource(decision);
                 }
             } catch (KubernetesClientException e) {

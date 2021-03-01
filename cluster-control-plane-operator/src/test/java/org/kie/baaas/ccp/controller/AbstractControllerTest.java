@@ -31,20 +31,20 @@ import org.mockito.Mockito;
 
 import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_RUN_CONTEXT;
 
-abstract class AbstractControllerTest {
+public abstract class AbstractControllerTest {
 
-    static final String CONTROLLER_NS = "baaas-cp";
-    static final String CUSTOMER_NS = "baaas-test";
-    static final String CUSTOMER = "test";
-
-    @Inject
-    KubernetesClient client;
+    public static final String CONTROLLER_NS = "test";
+    public static final String CUSTOMER_NS = "baaas-customer1";
+    public static final String CUSTOMER = "customer1";
 
     @Inject
-    KubernetesServer server;
+    protected KubernetesClient client;
+
+    @Inject
+    protected KubernetesServer server;
 
     @InjectMock
-    RemoteResourceClient remoteResourceClient;
+    protected RemoteResourceClient remoteResourceClient;
 
     @BeforeEach
     void cleanUp() {

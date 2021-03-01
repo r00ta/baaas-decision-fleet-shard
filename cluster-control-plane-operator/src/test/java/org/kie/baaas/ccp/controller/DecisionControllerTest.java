@@ -104,9 +104,14 @@ class DecisionControllerTest extends AbstractControllerTest {
                                 .setSource(URI.create("somesource"))
                                 .setVersion("1")))
                 .build();
-        DecisionVersion previous = new DecisionVersionBuilder().withMetadata(new ObjectMetaBuilder()
-                .withName("some-decision-1")
-                .withNamespace(CUSTOMER_NS).build()).withStatus(new DecisionVersionStatus())
+        DecisionVersion previous = new DecisionVersionBuilder()
+                .withMetadata(new ObjectMetaBuilder()
+                        .withName("some-decision-1")
+                        .withNamespace(CUSTOMER_NS)
+                        .addToLabels(CUSTOMER_LABEL, CUSTOMER)
+                        .addToLabels(DECISION_LABEL, decision.getMetadata().getName())
+                        .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
+                        .build())
                 .withStatus(new DecisionVersionStatus().setReady(Boolean.TRUE))
                 .build();
         client.customResources(DecisionVersion.class).inNamespace(CUSTOMER_NS).create(previous);

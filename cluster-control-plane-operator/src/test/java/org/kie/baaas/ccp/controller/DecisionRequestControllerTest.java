@@ -301,7 +301,7 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
         //Then
         RecordedRequest lastRequest = server.getLastRequest();
         assertThat(lastRequest.getMethod(), is("GET"));
-        assertThat(lastRequest.getPath(), is("/apis/operator.baaas/v1alpha1/namespaces/baaas-test/decisions/some-decision"));
+        assertThat(lastRequest.getPath(), is("/apis/operator.baaas/v1alpha1/namespaces/baaas-customer1/decisions/some-decision"));
         assertThat(client.namespaces().withName(CUSTOMER_NS).get(), notNullValue());
 
         assertThat(updateControl.isUpdateStatusSubResource(), is(true));

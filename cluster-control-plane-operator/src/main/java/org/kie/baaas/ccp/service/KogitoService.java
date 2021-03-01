@@ -45,6 +45,7 @@ import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_VERSION_LABEL
 import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getConditionStatus;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getName;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getSpec;
 
 @ApplicationScoped
@@ -52,23 +53,23 @@ public class KogitoService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(KogitoService.class);
 
-    private static final int REPLICAS = 1;
+    static final int REPLICAS = 1;
 
-    private static final String BAAAS_DASHBOARD_AUTH_SECRET = "baaas-ccp-kafka-credentials";
-    private static final String BAAAS_DASHBOARD_BOOTSTRAP_SERVERS = "BAAAS_DASHBOARD_BOOTSTRAP_SERVERS";
-    private static final String BAAAS_DASHBOARD_CLIENTID = "BAAAS_DASHBOARD_CLIENTID";
-    private static final String BAAAS_DASHBOARD_CLIENTSECRET = "BAAAS_DASHBOARD_CLIENTSECRET";
+    static final String BAAAS_DASHBOARD_AUTH_SECRET = "baaas-ccp-kafka-credentials";
+    static final String BAAAS_DASHBOARD_BOOTSTRAP_SERVERS = "BAAAS_DASHBOARD_BOOTSTRAP_SERVERS";
+    static final String BAAAS_DASHBOARD_CLIENTID = "BAAAS_DASHBOARD_CLIENTID";
+    static final String BAAAS_DASHBOARD_CLIENTSECRET = "BAAAS_DASHBOARD_CLIENTSECRET";
 
-    private static final String BAAAS_KAFKA_BOOTSTRAP_SERVERS = "BAAAS_KAFKA_BOOTSTRAP_SERVERS";
-    private static final String BAAAS_KAFKA_CLIENTID = "BAAAS_KAFKA_CLIENTID";
-    private static final String BAAAS_KAFKA_CLIENTSECRET = "BAAAS_KAFKA_CLIENTSECRET";
+    static final String BAAAS_KAFKA_BOOTSTRAP_SERVERS = "BAAAS_KAFKA_BOOTSTRAP_SERVERS";
+    static final String BAAAS_KAFKA_CLIENTID = "BAAAS_KAFKA_CLIENTID";
+    static final String BAAAS_KAFKA_CLIENTSECRET = "BAAAS_KAFKA_CLIENTSECRET";
 
-    private static final String BAAAS_KAFKA_INCOMING_TOPIC = "BAAAS_KAFKA_INCOMING_TOPIC";
-    private static final String BAAAS_KAFKA_OUTGOING_TOPIC = "BAAAS_KAFKA_OUTGOING_TOPIC";
+    static final String BAAAS_KAFKA_INCOMING_TOPIC = "BAAAS_KAFKA_INCOMING_TOPIC";
+    static final String BAAAS_KAFKA_OUTGOING_TOPIC = "BAAAS_KAFKA_OUTGOING_TOPIC";
 
-    private static final String BOOTSTRAP_SERVERS_KEY = "bootstrapservers";
-    private static final String CLIENTID_KEY = "clientid";
-    private static final String CLIENTSECRET_KEY = "clientsecret";
+    static final String BOOTSTRAP_SERVERS_KEY = "bootstrapservers";
+    static final String CLIENTID_KEY = "clientid";
+    static final String CLIENTSECRET_KEY = "clientsecret";
 
 
     public static final CustomResourceDefinitionContext KOGITO_RUNTIME_CONTEXT = new CustomResourceDefinitionContext
@@ -165,7 +166,7 @@ public class KogitoService {
         if (version.getSpec().getKafka() != null) {
             createOrUpdateKafkaAuthSecret(version);
         }
-        String name = JsonResourceUtils.getName(expected);
+        String name = getName(expected);
         JsonObject current = null;
         try {
             current = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
@@ -174,7 +175,8 @@ public class KogitoService {
         } catch (KubernetesClientException e) {
             LOGGER.debug("KogitoRuntime {} does not exist. Creating...", name);
         }
-        if (needsUpdate(expected, current)) {
+        //TODO KOGITO-4536 - Only createOrReplace when needsUpdate
+        if (current == null) {
             try {
                 current = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
                         .createOrReplace(version.getMetadata().getNamespace(), expected.toString()))
@@ -184,7 +186,19 @@ public class KogitoService {
                 LOGGER.warn("Unable to process KogitoService", e);
                 versionService.setServiceStatus(version, Boolean.FALSE, REASON_FAILED, e.getMessage());
             }
+        } else if (needsUpdate(expected, current)) {
+            try {
+                LOGGER.info("Deleting KogitoRuntime {}. See KOGITO-4536", getName(expected));
+                client.customResource(KOGITO_RUNTIME_CONTEXT).delete(version.getMetadata().getNamespace(), getName(expected));
+                current = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
+                        .createOrReplace(version.getMetadata().getNamespace(), expected.toString()))
+                        .build();
+            } catch (IOException e) {
+                LOGGER.warn("Unable to delete KogitoService", e);
+                versionService.setServiceStatus(version, Boolean.FALSE, REASON_FAILED, e.getMessage());
+            }
         }
+        //END KOGITO-4536
         boolean provisioning = getConditionStatus(current, "Provisioning");
         boolean deployed = getConditionStatus(current, "Deployed");
         String reason = provisioning ? "Provisioning" : "Unknown";
@@ -198,8 +212,24 @@ public class KogitoService {
     }
 
     private boolean needsUpdate(JsonObject expected, JsonObject current) {
-        return !Objects.equals(getSpec(expected), getSpec(current))
-                || !Objects.equals(JsonResourceUtils.getLabel(expected, DECISION_VERSION_LABEL), JsonResourceUtils.getLabel(current, DECISION_VERSION_LABEL));
+        JsonObject expectedSpec = getSpec(expected);
+        JsonObject currentSpec = getSpec(current);
+        if (!Objects.equals(expectedSpec.getString("image"), currentSpec.getString("image"))
+                && Objects.equals(expectedSpec.getInt("replicas"), currentSpec.getInt("replicas"))
+                && Objects.equals(JsonResourceUtils.getLabel(expected, DECISION_VERSION_LABEL), JsonResourceUtils.getLabel(current, DECISION_VERSION_LABEL))) {
+            return true;
+        }
+        if (expectedSpec.containsKey("env")) {
+            if (!currentSpec.containsKey("env")) {
+                return true;
+            }
+            return !expectedSpec.getJsonArray("env").stream()
+                    .map(v -> v.asJsonObject())
+                    .allMatch(e -> currentSpec.getJsonArray("env").stream()
+                            .map(v -> v.asJsonObject())
+                            .anyMatch(c -> Objects.equals(e, c)));
+        }
+        return false;
     }
 
     private boolean isBuilt(DecisionVersion version) {

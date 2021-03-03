@@ -32,6 +32,9 @@ import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 import org.kie.baaas.ccp.api.Decision;
 import org.kie.baaas.ccp.api.DecisionBuilder;
+import org.kie.baaas.ccp.api.DecisionRequest;
+import org.kie.baaas.ccp.api.DecisionRequestBuilder;
+import org.kie.baaas.ccp.api.DecisionRequestSpec;
 import org.kie.baaas.ccp.api.DecisionSpec;
 import org.kie.baaas.ccp.api.DecisionStatus;
 import org.kie.baaas.ccp.api.DecisionVersion;
@@ -53,6 +56,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_BUILD;
 import static org.kie.baaas.ccp.controller.DecisionLabels.CUSTOMER_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_REQUEST_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
 import static org.kie.baaas.ccp.service.KogitoService.KOGITO_RUNTIME_CONTEXT;
@@ -289,6 +293,42 @@ class DecisionControllerTest extends AbstractControllerTest {
         assertThat(version.getSpec(), is(decision.getSpec().getDefinition()));
         assertThat(version.getStatus().isReady(), is("True"));
         Mockito.verify(remoteResourceClient, Mockito.times(1)).notify(decision, version.getMetadata().getName(), null, Phase.CURRENT);
+    }
+
+    @Test
+    void testDelete() {
+        // Given
+        String reqName = "the-request";
+        DecisionRequest request = new DecisionRequestBuilder()
+                .withMetadata(new ObjectMetaBuilder()
+                        .withName(reqName)
+                        .withNamespace(CONTROLLER_NS)
+                        .build())
+                .withSpec(new DecisionRequestSpec()
+                        .setName("decisionName")
+                        .setCustomerId(CUSTOMER)
+                        .setDefinition(new DecisionVersionSpec()
+                                .setVersion("1")
+                                .setSource(URI.create("some-source"))))
+                .build();
+        client.customResources(DecisionRequest.class).inNamespace(CONTROLLER_NS).create(request);
+
+        Decision decision = new DecisionBuilder()
+                .withMetadata(new ObjectMetaBuilder()
+                        .withName(request.getSpec().getName())
+                        .withNamespace(CUSTOMER_NS)
+                        .addToLabels(DECISION_REQUEST_LABEL, reqName)
+                        .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
+                        .addToLabels(CUSTOMER_LABEL, request.getSpec().getCustomerId())
+                        .build())
+                .withSpec(new DecisionSpec().setDefinition(request.getSpec().getDefinition()))
+                .build();
+
+        // When
+        decisionController.deleteResource(decision, null);
+
+        // Then
+        assertThat(client.customResources(DecisionRequest.class).inNamespace(CONTROLLER_NS).withName(reqName).get(), nullValue());
     }
 
     private String getKogitoRuntime(DecisionVersion previous) {

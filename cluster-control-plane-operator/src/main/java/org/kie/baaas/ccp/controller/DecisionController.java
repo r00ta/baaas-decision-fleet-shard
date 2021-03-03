@@ -34,6 +34,7 @@ import io.javaoperatorsdk.operator.api.UpdateControl;
 import io.javaoperatorsdk.operator.api.config.ControllerConfiguration;
 import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
 import org.kie.baaas.ccp.api.Decision;
+import org.kie.baaas.ccp.api.DecisionRequest;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionBuilder;
 import org.kie.baaas.ccp.api.Phase;
@@ -45,6 +46,7 @@ import org.slf4j.LoggerFactory;
 import static io.fabric8.kubernetes.client.utils.KubernetesResourceUtil.getNamespace;
 import static org.kie.baaas.ccp.controller.DecisionLabels.CUSTOMER_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_REQUEST_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getConditionStatus;
@@ -69,7 +71,10 @@ public class DecisionController implements ResourceController<Decision> {
     }
 
     public DeleteControl deleteResource(Decision decision, Context<Decision> context) {
-        LOGGER.info("Create or update Decision: {} in namespace {}", decision.getMetadata().getName(), decision.getMetadata().getNamespace());
+        LOGGER.info("Deleted Decision: {} in namespace {}", decision.getMetadata().getName(), decision.getMetadata().getNamespace());
+        String requestName = decision.getMetadata().getLabels().get(DECISION_REQUEST_LABEL);
+        LOGGER.info("Deleting DecisionRequest: {} in namespace {}", requestName, client.getNamespace());
+        client.customResources(DecisionRequest.class).inNamespace(client.getNamespace()).withName(requestName).delete();
         return DeleteControl.DEFAULT_DELETE;
     }
 

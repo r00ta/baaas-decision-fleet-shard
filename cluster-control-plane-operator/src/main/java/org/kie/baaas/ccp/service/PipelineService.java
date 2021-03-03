@@ -161,14 +161,14 @@ public class PipelineService {
             JsonArray items = pipelineRuns.getJsonArray("items");
             JsonObject run = null;
             if (!items.isEmpty()) {
-                LOGGER.debug("PipelineRun exists for this decisionVersion. Skipping...");
+                LOGGER.debug("PipelineRun exists for this decisionVersion {}. Skipping...", version.getMetadata().getName());
                 Optional<JsonValue> recentBuild = items.stream().max(Comparator.comparing(v -> ResourceUtils.fromInstant(v.asJsonObject().getJsonObject("status").getString("startTime"))));
                 if (recentBuild.isPresent()) {
                     run = recentBuild.get().asJsonObject();
                 }
             }
             if (run == null) {
-                LOGGER.debug("PipelineRun doesn't exist for this decisionVersion. Create it.");
+                LOGGER.debug("PipelineRun doesn't exist for this decisionVersion {}. Create it.", version.getMetadata().getName());
                 run = Json.createObjectBuilder(client
                         .customResource(PIPELINE_RUN_CONTEXT)
                         .create(client.getNamespace(), expected.toString()))
@@ -176,7 +176,7 @@ public class PipelineService {
             }
             updateBuildStatus(version, run);
         } catch (KubernetesClientException | IOException e) {
-            LOGGER.warn("Unable to process Pipeline Run", e);
+            LOGGER.warn("Unable to process Pipeline Run for DecisionVersion {}", version.getMetadata().getName(), e);
             versionService.setBuildStatus(version, Boolean.FALSE, REASON_FAILED, e.getMessage());
         }
     }

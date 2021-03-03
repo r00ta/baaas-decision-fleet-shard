@@ -161,7 +161,7 @@ public class KogitoService {
         if (!isBuilt(version) || !isCurrent(version)) {
             return;
         }
-        LOGGER.info("Creating or Updating Kogito Runtime for version {}", version.getMetadata().getName());
+        LOGGER.info("Creating or Updating Kogito Runtime for DecisionVersion {}", version.getMetadata().getName());
         JsonObject expected = buildService(version);
         createOrUpdateDashboardAuthSecret(version.getMetadata().getNamespace());
         if (version.getSpec().getKafka() != null) {
@@ -183,7 +183,7 @@ public class KogitoService {
                         .createOrReplace(version.getMetadata().getNamespace(), expected.toString()))
                         .build();
             } catch (IOException e) {
-                LOGGER.warn("Unable to process KogitoService", e);
+                LOGGER.warn("Unable to process KogitoService for DecisionVersion {}", version.getMetadata().getName(), e);
                 versionService.setServiceStatus(version, Boolean.FALSE, REASON_FAILED, e.getMessage());
             }
         } else if (needsUpdate(expected, current)) {

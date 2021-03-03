@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.inject.Inject;
 import javax.json.Json;
@@ -268,6 +269,7 @@ class KogitoServiceTest extends AbstractControllerTest {
                         .addToLabels(DECISION_LABEL, decision.getMetadata().getName())
                         .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
                         .withOwnerReferences(decision.getOwnerReference())
+                        .withUid(UUID.randomUUID().toString())
                         .build())
                 .withSpec(decision.getSpec().getDefinition())
                 .withStatus(new DecisionVersionStatus().setReady(Boolean.TRUE)
@@ -296,28 +298,9 @@ class KogitoServiceTest extends AbstractControllerTest {
         KogitoRuntime runtime = client.customResources(KogitoRuntime.class)
                 .inNamespace(version.getMetadata().getNamespace())
                 .withName(decision.getMetadata().getName()).get();
-        assertThat(runtime, notNullValue());
-        assertThat(runtime.getMetadata().getLabels(), aMapWithSize(4));
-        assertThat(runtime.getMetadata().getLabels(), hasEntry(BAAAS_RESOURCE_LABEL, BAAAS_RESOURCE_KOGITO_SERVICE));
-        assertThat(runtime.getMetadata().getLabels(), hasEntry(DECISION_LABEL, decision.getMetadata().getName()));
-        assertThat(runtime.getMetadata().getLabels(), hasEntry(CUSTOMER_LABEL, decision.getMetadata().getLabels().get(CUSTOMER_LABEL)));
-        assertThat(runtime.getMetadata().getLabels(), hasEntry(MANAGED_BY_LABEL, OPERATOR_NAME));
-        assertThat(runtime.getMetadata().getOwnerReferences(), contains(version.getOwnerReference()));
-        assertThat(runtime.getSpec(), hasEntry("image", version.getStatus().getImageRef()));
-        assertThat(runtime.getSpec(), hasEntry("replicas", REPLICAS));
-        Collection<Map<String, Object>> env = (Collection<Map<String, Object>>) runtime.getSpec().get("env");
-        assertThat(env, hasSize(3));
-        assertThat(env.stream()
-                        .allMatch(e ->
-                                assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_BOOTSTRAP_SERVERS, BOOTSTRAP_SERVERS_KEY)
-                                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTID, CLIENTID_KEY)
-                                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTSECRET, CLIENTSECRET_KEY))
-
-                , is(true));
-        assertThat(version.getStatus().getKogitoServiceRef(), is(decision.getMetadata().getName()));
-        verify(versionService, times(1)).setServiceStatus(version, Boolean.FALSE, "Unknown", "");
-        // As it has been deleted and re-created, the status should be null
-        assertThat(runtime.getStatus(), nullValue());
+        assertThat(runtime, nullValue());
+        assertThat(version.getStatus().getKogitoServiceRef(), nullValue());
+        verify(versionService, times(1)).setServiceStatus(version, Boolean.FALSE, "KogitoRuntimeRedeploy", "re-creating KogitoRuntime");
     }
 
     @Test
@@ -338,6 +321,7 @@ class KogitoServiceTest extends AbstractControllerTest {
         DecisionVersion version = new DecisionVersionBuilder()
                 .withMetadata(new ObjectMetaBuilder()
                         .withName("some-decision-1")
+                        .withUid(UUID.randomUUID().toString())
                         .withNamespace(CUSTOMER_NS)
                         .addToLabels(CUSTOMER_LABEL, CUSTOMER)
                         .addToLabels(DECISION_LABEL, decision.getMetadata().getName())

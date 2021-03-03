@@ -46,6 +46,7 @@ import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getConditionStatus;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getName;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getOwnerUid;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getSpec;
 
 @ApplicationScoped
@@ -160,7 +161,7 @@ public class KogitoService {
         if (!isBuilt(version) || !isCurrent(version)) {
             return;
         }
-        LOGGER.info("Creating Kogito Runtime for version {}", version.getMetadata().getName());
+        LOGGER.info("Creating or Updating Kogito Runtime for version {}", version.getMetadata().getName());
         JsonObject expected = buildService(version);
         createOrUpdateDashboardAuthSecret(version.getMetadata().getNamespace());
         if (version.getSpec().getKafka() != null) {
@@ -181,24 +182,26 @@ public class KogitoService {
                 current = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
                         .createOrReplace(version.getMetadata().getNamespace(), expected.toString()))
                         .build();
-                version.getStatus().setKogitoServiceRef(name);
             } catch (IOException e) {
                 LOGGER.warn("Unable to process KogitoService", e);
                 versionService.setServiceStatus(version, Boolean.FALSE, REASON_FAILED, e.getMessage());
             }
         } else if (needsUpdate(expected, current)) {
             try {
+                client.customResource(KOGITO_RUNTIME_CONTEXT).createOrReplace(version.getMetadata().getNamespace(), expected.toString());
                 LOGGER.info("Deleting KogitoRuntime {}. See KOGITO-4536", getName(expected));
                 client.customResource(KOGITO_RUNTIME_CONTEXT).delete(version.getMetadata().getNamespace(), getName(expected));
-                current = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
-                        .createOrReplace(version.getMetadata().getNamespace(), expected.toString()))
-                        .build();
+                version.getStatus().setKogitoServiceRef(null);
+                version.getStatus().setReady(Boolean.FALSE);
+                versionService.setServiceStatus(version, Boolean.FALSE, "KogitoRuntimeRedeploy", "re-creating KogitoRuntime");
+                return;
             } catch (IOException e) {
                 LOGGER.warn("Unable to delete KogitoService", e);
                 versionService.setServiceStatus(version, Boolean.FALSE, REASON_FAILED, e.getMessage());
             }
         }
         //END KOGITO-4536
+        version.getStatus().setKogitoServiceRef(name);
         boolean provisioning = getConditionStatus(current, "Provisioning");
         boolean deployed = getConditionStatus(current, "Deployed");
         String reason = provisioning ? "Provisioning" : "Unknown";
@@ -215,8 +218,8 @@ public class KogitoService {
         JsonObject expectedSpec = getSpec(expected);
         JsonObject currentSpec = getSpec(current);
         if (!Objects.equals(expectedSpec.getString("image"), currentSpec.getString("image"))
-                && Objects.equals(expectedSpec.getInt("replicas"), currentSpec.getInt("replicas"))
-                && Objects.equals(JsonResourceUtils.getLabel(expected, DECISION_VERSION_LABEL), JsonResourceUtils.getLabel(current, DECISION_VERSION_LABEL))) {
+                || !Objects.equals(expectedSpec.getInt("replicas"), currentSpec.getInt("replicas"))
+                || !Objects.equals(getOwnerUid(expected), getOwnerUid(current))) {
             return true;
         }
         if (expectedSpec.containsKey("env")) {

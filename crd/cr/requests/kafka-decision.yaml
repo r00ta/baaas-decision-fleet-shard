@@ -3,13 +3,13 @@ kind: DecisionRequest
 metadata:
   name: kafka-decision
 spec:
-  customerId: kermit
+  customerId: rromerom
   name: kafka-decision
   definition:
     version: "1"
     source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
     kafka:
-      bootstrapServers: ruben-kafk--ovs-eyepvmzenltefb-tnk-wjf.kafka.devshift.org:443
+      bootstrapServers: kafka-cluster.baaas-kafka:9093
       secretName: baaas-ccp-kafka-credentials
       inputTopic: theinput
       outputTopic: theoutput

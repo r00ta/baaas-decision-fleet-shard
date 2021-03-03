@@ -3,7 +3,7 @@ kind: DecisionRequest
 metadata:
   name: example-decision-request
 spec:
-  customerId: kermit
+  customerId: rromerom
   name: example-decision
   definition:
     version: "1"

@@ -17,6 +17,7 @@ package org.kie.baaas.ccp.controller;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.inject.Inject;
 import javax.json.Json;
@@ -44,9 +45,11 @@ import org.kie.baaas.ccp.service.KogitoService;
 import org.mockito.Mockito;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_BUILD;
 import static org.kie.baaas.ccp.controller.DecisionLabels.CUSTOMER_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_LABEL;
@@ -154,6 +157,7 @@ class DecisionControllerTest extends AbstractControllerTest {
                         .addToLabels(CUSTOMER_LABEL, decision.getMetadata().getLabels().get(CUSTOMER_LABEL))
                         .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
                         .withOwnerReferences(decision.getOwnerReference())
+                        .withUid(UUID.randomUUID().toString())
                         .build())
                 .withStatus(new DecisionVersionStatus())
                 .withSpec(decision.getSpec().getDefinition())
@@ -170,8 +174,7 @@ class DecisionControllerTest extends AbstractControllerTest {
         //Then
         assertThat(updateControl.isUpdateStatusSubResource(), is(false));
         DecisionVersion version = client.customResources(DecisionVersion.class).inNamespace(CUSTOMER_NS).withName("some-decision-1").get();
-        JsonObject kogitoSvc = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT).list(CUSTOMER_NS)).build().getJsonArray("items").getJsonObject(0);
-        assertThat(kogitoSvc, notNullValue());
+        assertThat(Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT).list(CUSTOMER_NS)).build().getJsonArray("items"), empty());
         assertThat(version.getMetadata().getName(), is("some-decision-1"));
         Map<String, String> expectedLabels = Map.of(DECISION_LABEL, decision.getMetadata().getName(), MANAGED_BY_LABEL, OPERATOR_NAME, CUSTOMER_LABEL, CUSTOMER);
         expectedLabels.forEach((key, value) -> assertThat(version.getMetadata().getLabels(), hasEntry(key, value)));
@@ -179,7 +182,7 @@ class DecisionControllerTest extends AbstractControllerTest {
         assertThat(version.getMetadata().getOwnerReferences().get(0).getName(), is(decision.getMetadata().getName()));
         assertThat(version.getSpec(), is(decision.getSpec().getDefinition()));
         assertThat(version.getStatus().isReady(), is("True"));
-        assertThat(version.getStatus().getKogitoServiceRef(), is(JsonResourceUtils.getName(kogitoSvc)));
+        assertThat(version.getStatus().getKogitoServiceRef(), nullValue());
     }
 
     @Test
@@ -207,6 +210,7 @@ class DecisionControllerTest extends AbstractControllerTest {
                         .addToLabels(DECISION_LABEL, decision.getMetadata().getName())
                         .addToLabels(CUSTOMER_LABEL, decision.getMetadata().getLabels().get(CUSTOMER_LABEL))
                         .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
+                        .withUid(UUID.randomUUID().toString())
                         .build())
                 .withStatus(new DecisionVersionStatus()
                         .setReady(Boolean.TRUE)
@@ -259,6 +263,7 @@ class DecisionControllerTest extends AbstractControllerTest {
                         .addToLabels(DECISION_LABEL, decision.getMetadata().getName())
                         .addToLabels(CUSTOMER_LABEL, decision.getMetadata().getLabels().get(CUSTOMER_LABEL))
                         .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
+                        .withUid(UUID.randomUUID().toString())
                         .build())
                 .withStatus(new DecisionVersionStatus()
                         .setReady(Boolean.TRUE)

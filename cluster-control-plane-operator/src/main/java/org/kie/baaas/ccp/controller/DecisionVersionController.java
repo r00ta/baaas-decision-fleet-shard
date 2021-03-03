@@ -62,10 +62,13 @@ public class DecisionVersionController implements ResourceController<DecisionVer
 
     private final ReentrantLock lock = new ReentrantLock();
 
+    private EventSourceManager eventSourceManager;
+
     @Override
     public void init(EventSourceManager eventSourceManager) {
         lock.lock();
         try {
+            this.eventSourceManager = eventSourceManager;
             this.kogitoRuntimeEventSource = GenericResourceEventSource.createAndRegisterWatch(kubernetesClient, KOGITO_RUNTIME_CONTEXT);
             eventSourceManager.registerEventSource("pipeline-run-event-source", this.kogitoRuntimeEventSource);
             this.pipelineRunEventSource = GenericResourceEventSource.createAndRegisterWatch(kubernetesClient, PIPELINE_RUN_CONTEXT);
@@ -77,13 +80,21 @@ public class DecisionVersionController implements ResourceController<DecisionVer
 
     public DeleteControl deleteResource(DecisionVersion version, Context<DecisionVersion> context) {
         LOGGER.info("Delete DecisionVersion: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
+        eventSourceManager.deRegisterCustomResourceFromEventSource(getEventSourceName(version), version.getMetadata().getUid());
         return DeleteControl.DEFAULT_DELETE;
     }
 
     public UpdateControl<DecisionVersion> createOrUpdateResource(DecisionVersion version, Context<DecisionVersion> context) {
         LOGGER.info("Create or update DecisionVersion: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
+        if (!eventSourceManager.getRegisteredEventSources().containsKey(getEventSourceName(version))) {
+            eventSourceManager.registerEventSource(getEventSourceName(version), DecisionEventSource.createAndRegisterWatch(kubernetesClient, version));
+        }
         pipelineService.createOrUpdatePipelineRun(version);
         kogitoService.createOrUpdateService(version);
         return versionService.updateStatus(version);
+    }
+
+    private static String getEventSourceName(DecisionVersion version) {
+        return "decision-event-source-" + version.getMetadata().getName();
     }
 }

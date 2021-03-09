@@ -23,7 +23,7 @@ build:
   image: quay.io/kiegroup/kogito-quarkus-ubi8-s2i:1.0.0
   stage: build
   script:
-    - "/usr/share/maven/bin/mvn compile"
+    - "/usr/share/maven/bin/mvn package -Dmaven.test.skip=true"
   artifacts:
     expire_in: 1 week
     paths:
@@ -70,7 +70,7 @@ native-compile:
   script:
     - "/usr/share/maven/bin/mvn package -Pnative -Dmaven.test.skip=true"
   artifacts:
-    expire_in: 1 week
+    expire_in: 1 day
     paths:
       - cluster-control-plane-operator/target/*-runner
   tags:
@@ -79,7 +79,24 @@ native-compile:
     - main@baaas/baaas-cluster-control-plane
     - merge_requests@baaas/baaas-cluster-control-plane
 
-build-and-push-container:
+build-and-push-container-jvm:
+  <<: *cache-definition
+  image: docker:19.03.12
+  stage: build-and-push-container
+  before_script:
+    - echo "$CONTAINER_REGISTRY_PASSWORD" | docker login quay.io --username $CONTAINER_REGISTRY_USER --password-stdin
+  script:
+    - "docker build -f cluster-control-plane-operator/src/main/docker/Dockerfile.jvm -t $OUTPUT_CONTAINER_NAME-jvm cluster-control-plane-operator/"
+    - "docker push $OUTPUT_CONTAINER_NAME-jvm"
+  after_script:
+    - "docker image rm -f $OUTPUT_CONTAINER_NAME-jvm"
+  tags:
+    - baaas
+  only:
+    - main@baaas/baaas-cluster-control-plane
+    - merge_requests@baaas/baaas-cluster-control-plane
+
+build-and-push-container-native:
   image: docker:19.03.12
   stage: build-and-push-container
   before_script:

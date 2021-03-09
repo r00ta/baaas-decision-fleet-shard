@@ -94,7 +94,6 @@ build-and-push-container-jvm:
     - baaas
   only:
     - main@baaas/baaas-cluster-control-plane
-    - merge_requests@baaas/baaas-cluster-control-plane
 
 build-and-push-container-native:
   image: docker:19.03.12

@@ -27,14 +27,15 @@ import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
-import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionSpec;
 import org.kie.baaas.ccp.api.ResourceUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_FAILED;
 import static org.kie.baaas.ccp.controller.DecisionLabels.BAAAS_RESOURCE_LABEL;
@@ -65,8 +66,7 @@ public class PipelineService {
     private static final String APP_PROPS_CONFIGMAP = "baaas-ccp-build-application-props";
     private static final String IMAGE_REF_TEMPLATE = "quay.io/%s/baaas-decision-builds:%s-%s-%s";
 
-    public static final CustomResourceDefinitionContext PIPELINE_RUN_CONTEXT = new CustomResourceDefinitionContext
-            .Builder()
+    public static final CustomResourceDefinitionContext PIPELINE_RUN_CONTEXT = new CustomResourceDefinitionContext.Builder()
             .withGroup("tekton.dev")
             .withVersion("v1beta1")
             .withName("pipelineruns.tekton.dev")
@@ -195,8 +195,7 @@ public class PipelineService {
                     version,
                     Boolean.FALSE,
                     succeeded.getString(PIPELINE_REASON),
-                    succeeded.getString(PIPELINE_MESSAGE)
-            );
+                    succeeded.getString(PIPELINE_MESSAGE));
         }
     }
 }

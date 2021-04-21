@@ -14,10 +14,11 @@
  */
 package org.kie.baaas.ccp.model;
 
+import org.kie.baaas.ccp.api.DecisionVersion;
+
 import io.fabric8.kubernetes.client.Watcher;
 import io.javaoperatorsdk.operator.processing.event.AbstractEvent;
 import io.javaoperatorsdk.operator.processing.event.EventSource;
-import org.kie.baaas.ccp.api.DecisionVersion;
 
 public class DecisionVersionEvent extends AbstractEvent {
 

@@ -17,9 +17,6 @@ package org.kie.baaas.ccp.controller;
 import javax.inject.Inject;
 import javax.json.Json;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
-import io.quarkus.test.junit.mockito.InjectMock;
 import org.junit.jupiter.api.BeforeEach;
 import org.kie.baaas.ccp.api.Decision;
 import org.kie.baaas.ccp.api.DecisionRequest;
@@ -28,6 +25,10 @@ import org.kie.baaas.ccp.client.RemoteResourceClient;
 import org.kie.baaas.ccp.model.KogitoRuntime;
 import org.kie.baaas.ccp.model.PipelineRun;
 import org.mockito.Mockito;
+
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
+import io.quarkus.test.junit.mockito.InjectMock;
 
 import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_RUN_CONTEXT;
 

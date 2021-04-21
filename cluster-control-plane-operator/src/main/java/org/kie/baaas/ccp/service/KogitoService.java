@@ -24,16 +24,17 @@ import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 
+import org.kie.baaas.ccp.api.Decision;
+import org.kie.baaas.ccp.api.DecisionVersion;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
-import org.kie.baaas.ccp.api.Decision;
-import org.kie.baaas.ccp.api.DecisionVersion;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_BUILD;
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.REASON_FAILED;
@@ -72,9 +73,7 @@ public class KogitoService {
     static final String CLIENTID_KEY = "clientid";
     static final String CLIENTSECRET_KEY = "clientsecret";
 
-
-    public static final CustomResourceDefinitionContext KOGITO_RUNTIME_CONTEXT = new CustomResourceDefinitionContext
-            .Builder()
+    public static final CustomResourceDefinitionContext KOGITO_RUNTIME_CONTEXT = new CustomResourceDefinitionContext.Builder()
             .withGroup("app.kiegroup.org")
             .withVersion("v1beta1")
             .withName("kogitoruntimes.app.kiegroup.org")

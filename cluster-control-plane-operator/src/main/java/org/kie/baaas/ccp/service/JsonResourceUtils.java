@@ -146,7 +146,6 @@ public class JsonResourceUtils {
                 .build();
     }
 
-
     public static JsonObject buildEnvValueFromSecret(String name, String secretName, String secretPropertyName) {
         return Json.createObjectBuilder()
                 .add(NAME, name)

@@ -22,15 +22,16 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 
+import org.kie.baaas.ccp.model.GenericResourceEvent;
+import org.kie.baaas.ccp.service.JsonResourceUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
-import org.kie.baaas.ccp.model.GenericResourceEvent;
-import org.kie.baaas.ccp.service.JsonResourceUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;

@@ -47,7 +47,7 @@ class JsonResourceUtilsTest {
         assertThat(get(Json.createObjectBuilder().add("bar", "baz").build(), "bar", "foo"), nullValue());
 
         assertThat(get(Json.createObjectBuilder()
-                        .add("foo", "val1").build(),
+                .add("foo", "val1").build(),
                 "foo"), equalTo(Json.createValue("val1")));
         assertThat(get(Json.createObjectBuilder()
                 .add("foo", Json.createObjectBuilder()
@@ -85,7 +85,6 @@ class JsonResourceUtilsTest {
         assertThat(getLabel(buildBasicResource(), "label2"), nullValue());
     }
 
-
     @Test
     void testGetSpec() {
         assertThat(getSpec(null), nullValue());
@@ -110,7 +109,6 @@ class JsonResourceUtilsTest {
         JsonObject expected = buildCondition("Condition1");
         assertThat(getCondition(buildBasicResourceWithConditions(), "Condition1"), equalTo(expected));
     }
-
 
     @Test
     void testGetConditionStatus() {

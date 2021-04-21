@@ -27,5 +27,6 @@ public class DecisionLabels {
     public static final String BAAAS_RESOURCE_KOGITO_SERVICE = "kogitoservice";
     public static final String BAAAS_RESOURCE_PIPELINE_RUN = "pipelinerun";
 
-    private DecisionLabels() {}
+    private DecisionLabels() {
+    }
 }

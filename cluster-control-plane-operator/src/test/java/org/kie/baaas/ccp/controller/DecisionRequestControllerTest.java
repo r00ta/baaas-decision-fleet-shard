@@ -20,12 +20,6 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
-import io.fabric8.kubernetes.api.model.ConditionBuilder;
-import io.fabric8.kubernetes.api.model.NamespaceBuilder;
-import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.javaoperatorsdk.operator.api.UpdateControl;
-import io.quarkus.test.junit.QuarkusTest;
-import okhttp3.mockwebserver.RecordedRequest;
 import org.junit.jupiter.api.Test;
 import org.kie.baaas.ccp.api.AdmissionStatus;
 import org.kie.baaas.ccp.api.Decision;
@@ -41,6 +35,14 @@ import org.kie.baaas.ccp.api.DecisionVersionSpec;
 import org.kie.baaas.ccp.api.DecisionVersionStatus;
 import org.kie.baaas.ccp.api.Phase;
 import org.mockito.Mockito;
+
+import io.fabric8.kubernetes.api.model.ConditionBuilder;
+import io.fabric8.kubernetes.api.model.NamespaceBuilder;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.javaoperatorsdk.operator.api.UpdateControl;
+import io.quarkus.test.junit.QuarkusTest;
+
+import okhttp3.mockwebserver.RecordedRequest;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;

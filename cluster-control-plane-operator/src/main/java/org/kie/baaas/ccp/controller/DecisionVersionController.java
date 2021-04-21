@@ -20,6 +20,13 @@ import java.util.concurrent.locks.ReentrantLock;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.kie.baaas.ccp.api.DecisionVersion;
+import org.kie.baaas.ccp.service.DecisionVersionService;
+import org.kie.baaas.ccp.service.KogitoService;
+import org.kie.baaas.ccp.service.PipelineService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.api.Context;
 import io.javaoperatorsdk.operator.api.Controller;
@@ -28,12 +35,6 @@ import io.javaoperatorsdk.operator.api.ResourceController;
 import io.javaoperatorsdk.operator.api.UpdateControl;
 import io.javaoperatorsdk.operator.api.config.ControllerConfiguration;
 import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
-import org.kie.baaas.ccp.api.DecisionVersion;
-import org.kie.baaas.ccp.service.DecisionVersionService;
-import org.kie.baaas.ccp.service.KogitoService;
-import org.kie.baaas.ccp.service.PipelineService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static org.kie.baaas.ccp.service.KogitoService.KOGITO_RUNTIME_CONTEXT;
 import static org.kie.baaas.ccp.service.PipelineService.PIPELINE_RUN_CONTEXT;

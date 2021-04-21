@@ -23,6 +23,16 @@ import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
 
+import org.kie.baaas.ccp.api.Decision;
+import org.kie.baaas.ccp.api.DecisionRequest;
+import org.kie.baaas.ccp.api.DecisionVersion;
+import org.kie.baaas.ccp.api.DecisionVersionBuilder;
+import org.kie.baaas.ccp.api.Phase;
+import org.kie.baaas.ccp.client.RemoteResourceClient;
+import org.kie.baaas.ccp.service.JsonResourceUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
@@ -33,15 +43,6 @@ import io.javaoperatorsdk.operator.api.ResourceController;
 import io.javaoperatorsdk.operator.api.UpdateControl;
 import io.javaoperatorsdk.operator.api.config.ControllerConfiguration;
 import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
-import org.kie.baaas.ccp.api.Decision;
-import org.kie.baaas.ccp.api.DecisionRequest;
-import org.kie.baaas.ccp.api.DecisionVersion;
-import org.kie.baaas.ccp.api.DecisionVersionBuilder;
-import org.kie.baaas.ccp.api.Phase;
-import org.kie.baaas.ccp.client.RemoteResourceClient;
-import org.kie.baaas.ccp.service.JsonResourceUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static io.fabric8.kubernetes.client.utils.KubernetesResourceUtil.getNamespace;
 import static org.kie.baaas.ccp.controller.DecisionLabels.CUSTOMER_LABEL;

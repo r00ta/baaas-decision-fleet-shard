@@ -14,14 +14,15 @@
  */
 package org.kie.baaas.ccp.controller;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
-import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.model.DecisionVersionEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.WatcherException;
+import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
 
 import static io.javaoperatorsdk.operator.processing.KubernetesResourceUtils.getUID;
 import static io.javaoperatorsdk.operator.processing.KubernetesResourceUtils.getVersion;
@@ -53,7 +54,7 @@ public class DecisionVersionEventSource extends AbstractEventSource implements W
 
     @Override
     public void eventReceived(Action action, DecisionVersion resource) {
-        if(eventHandler == null) {
+        if (eventHandler == null) {
             LOGGER.warn("Ignoring action {} for resource {}. EventHandler has not yet been initialized.", action, resource);
             return;
         }

@@ -23,12 +23,7 @@ build:
   image: quay.io/kiegroup/kogito-quarkus-ubi8-s2i:1.0.0
   stage: build
   script:
-    - "/usr/share/maven/bin/mvn package -Dmaven.test.skip=true"
-  artifacts:
-    expire_in: 1 week
-    paths:
-      - api/target/checkstyle.log
-      - cluster-control-plane-operator/target/checkstyle.log
+    - "/usr/share/maven/bin/mvn package -Dmaven.test.skip=true -Pvalidate-formatting"
   tags:
     - baaas
   only:

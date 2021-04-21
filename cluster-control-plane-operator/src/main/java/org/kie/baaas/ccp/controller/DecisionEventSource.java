@@ -14,15 +14,16 @@
  */
 package org.kie.baaas.ccp.controller;
 
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.Watcher;
-import io.fabric8.kubernetes.client.WatcherException;
-import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
 import org.kie.baaas.ccp.api.Decision;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.model.DecisionEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.WatcherException;
+import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
 
 import static io.javaoperatorsdk.operator.processing.KubernetesResourceUtils.getUID;
 import static io.javaoperatorsdk.operator.processing.KubernetesResourceUtils.getVersion;

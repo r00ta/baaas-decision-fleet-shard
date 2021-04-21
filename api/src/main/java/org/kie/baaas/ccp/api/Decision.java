@@ -16,6 +16,7 @@
 package org.kie.baaas.ccp.api;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import io.fabric8.kubernetes.api.model.Namespaced;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;

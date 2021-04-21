@@ -23,12 +23,6 @@ import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
 
-import io.fabric8.kubernetes.api.model.Condition;
-import io.fabric8.kubernetes.api.model.ConditionBuilder;
-import io.fabric8.kubernetes.api.model.NamespaceBuilder;
-import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.javaoperatorsdk.operator.api.UpdateControl;
-import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 import org.kie.baaas.ccp.api.Decision;
 import org.kie.baaas.ccp.api.DecisionBuilder;
@@ -46,6 +40,13 @@ import org.kie.baaas.ccp.api.ResourceUtils;
 import org.kie.baaas.ccp.service.JsonResourceUtils;
 import org.kie.baaas.ccp.service.KogitoService;
 import org.mockito.Mockito;
+
+import io.fabric8.kubernetes.api.model.Condition;
+import io.fabric8.kubernetes.api.model.ConditionBuilder;
+import io.fabric8.kubernetes.api.model.NamespaceBuilder;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.javaoperatorsdk.operator.api.UpdateControl;
+import io.quarkus.test.junit.QuarkusTest;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
@@ -241,7 +242,6 @@ class DecisionControllerTest extends AbstractControllerTest {
         assertThat(version.getStatus().isReady(), is("True"));
         Mockito.verify(remoteResourceClient, Mockito.times(1)).notify(decision, version.getMetadata().getName(), null, Phase.CURRENT);
     }
-
 
     @Test
     void testRollbackVersion() throws IOException {

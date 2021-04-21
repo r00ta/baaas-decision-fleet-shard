@@ -26,15 +26,6 @@ import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 
-import io.fabric8.kubernetes.api.model.Condition;
-import io.fabric8.kubernetes.api.model.ConditionBuilder;
-import io.fabric8.kubernetes.api.model.EnvVar;
-import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.fabric8.kubernetes.api.model.Secret;
-import io.fabric8.kubernetes.api.model.SecretBuilder;
-import io.fabric8.kubernetes.client.utils.Serialization;
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.mockito.InjectMock;
 import org.junit.jupiter.api.Test;
 import org.kie.baaas.ccp.api.Decision;
 import org.kie.baaas.ccp.api.DecisionBuilder;
@@ -47,6 +38,16 @@ import org.kie.baaas.ccp.api.Kafka;
 import org.kie.baaas.ccp.api.ResourceUtils;
 import org.kie.baaas.ccp.controller.AbstractControllerTest;
 import org.kie.baaas.ccp.model.KogitoRuntime;
+
+import io.fabric8.kubernetes.api.model.Condition;
+import io.fabric8.kubernetes.api.model.ConditionBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.SecretBuilder;
+import io.fabric8.kubernetes.client.utils.Serialization;
+import io.quarkus.test.junit.QuarkusTest;
+import io.quarkus.test.junit.mockito.InjectMock;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.aMapWithSize;
@@ -236,10 +237,9 @@ class KogitoServiceTest extends AbstractControllerTest {
         Collection<Map<String, Object>> env = (Collection<Map<String, Object>>) runtime.getSpec().get("env");
         assertThat(env, hasSize(3));
         assertThat(env.stream()
-                        .allMatch(e ->
-                                assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_BOOTSTRAP_SERVERS, BOOTSTRAP_SERVERS_KEY)
-                                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTID, CLIENTID_KEY)
-                                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTSECRET, CLIENTSECRET_KEY))
+                .allMatch(e -> assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_BOOTSTRAP_SERVERS, BOOTSTRAP_SERVERS_KEY)
+                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTID, CLIENTID_KEY)
+                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTSECRET, CLIENTSECRET_KEY))
 
                 , is(true));
         assertThat(version.getStatus().getKogitoServiceRef(), is(decision.getMetadata().getName()));
@@ -365,10 +365,9 @@ class KogitoServiceTest extends AbstractControllerTest {
         Collection<Map<String, Object>> env = (Collection<Map<String, Object>>) runtime.getSpec().get("env");
         assertThat(env, hasSize(3));
         assertThat(env.stream()
-                        .allMatch(e ->
-                                assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_BOOTSTRAP_SERVERS, BOOTSTRAP_SERVERS_KEY)
-                                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTID, CLIENTID_KEY)
-                                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTSECRET, CLIENTSECRET_KEY))
+                .allMatch(e -> assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_BOOTSTRAP_SERVERS, BOOTSTRAP_SERVERS_KEY)
+                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTID, CLIENTID_KEY)
+                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTSECRET, CLIENTSECRET_KEY))
 
                 , is(true));
         assertThat(version.getStatus().getKogitoServiceRef(), is(decision.getMetadata().getName()));
@@ -440,15 +439,14 @@ class KogitoServiceTest extends AbstractControllerTest {
         Collection<Map<String, Object>> env = (Collection<Map<String, Object>>) runtime.getSpec().get("env");
         assertThat(env, hasSize(8));
         assertThat(env.stream()
-                        .allMatch(e ->
-                                assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_BOOTSTRAP_SERVERS, BOOTSTRAP_SERVERS_KEY)
-                                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTID, CLIENTID_KEY)
-                                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTSECRET, CLIENTSECRET_KEY)
-                                        || assertSecretKeyEnv(e, expectedKafkaSecretName, BAAAS_KAFKA_CLIENTID, CLIENTID_KEY)
-                                        || assertSecretKeyEnv(e, expectedKafkaSecretName, BAAAS_KAFKA_CLIENTSECRET, CLIENTSECRET_KEY)
-                                        || assertKeyEnv(e, BAAAS_KAFKA_BOOTSTRAP_SERVERS, decision.getSpec().getDefinition().getKafka().getBootstrapServers())
-                                        || assertKeyEnv(e, BAAAS_KAFKA_INCOMING_TOPIC, decision.getSpec().getDefinition().getKafka().getInputTopic())
-                                        || assertKeyEnv(e, BAAAS_KAFKA_OUTGOING_TOPIC, decision.getSpec().getDefinition().getKafka().getOutputTopic()))
+                .allMatch(e -> assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_BOOTSTRAP_SERVERS, BOOTSTRAP_SERVERS_KEY)
+                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTID, CLIENTID_KEY)
+                        || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTSECRET, CLIENTSECRET_KEY)
+                        || assertSecretKeyEnv(e, expectedKafkaSecretName, BAAAS_KAFKA_CLIENTID, CLIENTID_KEY)
+                        || assertSecretKeyEnv(e, expectedKafkaSecretName, BAAAS_KAFKA_CLIENTSECRET, CLIENTSECRET_KEY)
+                        || assertKeyEnv(e, BAAAS_KAFKA_BOOTSTRAP_SERVERS, decision.getSpec().getDefinition().getKafka().getBootstrapServers())
+                        || assertKeyEnv(e, BAAAS_KAFKA_INCOMING_TOPIC, decision.getSpec().getDefinition().getKafka().getInputTopic())
+                        || assertKeyEnv(e, BAAAS_KAFKA_OUTGOING_TOPIC, decision.getSpec().getDefinition().getKafka().getOutputTopic()))
 
                 , is(true));
         assertThat(version.getStatus().getKogitoServiceRef(), is(decision.getMetadata().getName()));
@@ -487,6 +485,5 @@ class KogitoServiceTest extends AbstractControllerTest {
         object.entrySet().stream().filter(e -> !e.getKey().equals("status")).forEach(e -> builder.add(e.getKey(), e.getValue()));
         return builder.add("status", statusBuilder.build()).build();
     }
-
 
 }

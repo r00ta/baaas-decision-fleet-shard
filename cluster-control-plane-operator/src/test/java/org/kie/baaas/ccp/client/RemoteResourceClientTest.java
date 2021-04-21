@@ -26,10 +26,6 @@ import java.util.concurrent.TimeoutException;
 import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.client.VerificationException;
-import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
-import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +41,12 @@ import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionBuilder;
 import org.kie.baaas.ccp.api.DecisionVersionSpec;
 import org.kie.baaas.ccp.api.Phase;
+
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.VerificationException;
+
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.quarkus.test.junit.QuarkusTest;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.absent;
@@ -127,31 +129,29 @@ class RemoteResourceClientTest {
                 .build();
         client.notify(request, "some message", Phase.FAILED);
         CompletableFuture<Boolean> verification = CompletableFuture.supplyAsync(() -> {
-                    while (true) {
-                        try {
-                            callbacks.forEach(s -> mockServer.verify(postRequestedFor(urlEqualTo(s))
-                                    .withHeader("Content-Type", equalTo(MediaType.APPLICATION_JSON))
-                                    .withRequestBody(matchingJsonPath("$.decision", containing(request.getSpec().getName())))
-                                    .withRequestBody(matchingJsonPath("$.customer", containing(request.getSpec().getCustomerId())))
-                                    .withRequestBody(matchingJsonPath("$.message", containing("some message")))
-                                    .withRequestBody(matchingJsonPath("$.phase", containing(Phase.FAILED.name())))
-                                    .withRequestBody(matchingJsonPath("$.namespace", absent()))
-                                    .withRequestBody(matchingJsonPath("$.endpoint", absent()))
-                                    .withRequestBody(matchingJsonPath("$.version", absent()))
-                                    .withRequestBody(matchingJsonPath("$.version_resource", absent()))
-                            ));
-                            return Boolean.TRUE;
-                        } catch (VerificationException e) {
-                            //Ignore and retry
-                        }
-                        try {
-                            Thread.sleep(200L);
-                        } catch (InterruptedException e) {
-                            return Boolean.FALSE;
-                        }
-                    }
+            while (true) {
+                try {
+                    callbacks.forEach(s -> mockServer.verify(postRequestedFor(urlEqualTo(s))
+                            .withHeader("Content-Type", equalTo(MediaType.APPLICATION_JSON))
+                            .withRequestBody(matchingJsonPath("$.decision", containing(request.getSpec().getName())))
+                            .withRequestBody(matchingJsonPath("$.customer", containing(request.getSpec().getCustomerId())))
+                            .withRequestBody(matchingJsonPath("$.message", containing("some message")))
+                            .withRequestBody(matchingJsonPath("$.phase", containing(Phase.FAILED.name())))
+                            .withRequestBody(matchingJsonPath("$.namespace", absent()))
+                            .withRequestBody(matchingJsonPath("$.endpoint", absent()))
+                            .withRequestBody(matchingJsonPath("$.version", absent()))
+                            .withRequestBody(matchingJsonPath("$.version_resource", absent()))));
+                    return Boolean.TRUE;
+                } catch (VerificationException e) {
+                    //Ignore and retry
                 }
-        );
+                try {
+                    Thread.sleep(200L);
+                } catch (InterruptedException e) {
+                    return Boolean.FALSE;
+                }
+            }
+        });
         assertTrue(verification.get(20, TimeUnit.SECONDS));
         assertThat(mockServer.findAllUnmatchedRequests(), empty());
     }
@@ -174,31 +174,29 @@ class RemoteResourceClientTest {
                 .build();
         client.notify(request, "some message", Phase.FAILED);
         CompletableFuture<Boolean> verification = CompletableFuture.supplyAsync(() -> {
-                    while (true) {
-                        try {
-                            callbacks.forEach(s -> mockServer.verify(postRequestedFor(urlEqualTo(s))
-                                    .withHeader("Content-Type", equalTo(MediaType.APPLICATION_JSON))
-                                    .withRequestBody(matchingJsonPath("$.decision", containing(request.getSpec().getName())))
-                                    .withRequestBody(matchingJsonPath("$.customer", containing(request.getSpec().getCustomerId())))
-                                    .withRequestBody(matchingJsonPath("$.message", containing("some message")))
-                                    .withRequestBody(matchingJsonPath("$.phase", containing(Phase.FAILED.name())))
-                                    .withRequestBody(matchingJsonPath("$.namespace", absent()))
-                                    .withRequestBody(matchingJsonPath("$.endpoint", absent()))
-                                    .withRequestBody(matchingJsonPath("$.version", absent()))
-                                    .withRequestBody(matchingJsonPath("$.version_resource", absent()))
-                            ));
-                            return Boolean.TRUE;
-                        } catch (VerificationException e) {
-                            //Ignore and retry
-                        }
-                        try {
-                            Thread.sleep(200L);
-                        } catch (InterruptedException e) {
-                            return Boolean.FALSE;
-                        }
-                    }
+            while (true) {
+                try {
+                    callbacks.forEach(s -> mockServer.verify(postRequestedFor(urlEqualTo(s))
+                            .withHeader("Content-Type", equalTo(MediaType.APPLICATION_JSON))
+                            .withRequestBody(matchingJsonPath("$.decision", containing(request.getSpec().getName())))
+                            .withRequestBody(matchingJsonPath("$.customer", containing(request.getSpec().getCustomerId())))
+                            .withRequestBody(matchingJsonPath("$.message", containing("some message")))
+                            .withRequestBody(matchingJsonPath("$.phase", containing(Phase.FAILED.name())))
+                            .withRequestBody(matchingJsonPath("$.namespace", absent()))
+                            .withRequestBody(matchingJsonPath("$.endpoint", absent()))
+                            .withRequestBody(matchingJsonPath("$.version", absent()))
+                            .withRequestBody(matchingJsonPath("$.version_resource", absent()))));
+                    return Boolean.TRUE;
+                } catch (VerificationException e) {
+                    //Ignore and retry
                 }
-        );
+                try {
+                    Thread.sleep(200L);
+                } catch (InterruptedException e) {
+                    return Boolean.FALSE;
+                }
+            }
+        });
         assertTrue(verification.get(20, TimeUnit.SECONDS));
         assertThat(mockServer.findAllUnmatchedRequests(), empty());
     }
@@ -225,31 +223,29 @@ class RemoteResourceClientTest {
                 .build();
         client.notify(decision, "mydecision-1", "some message", Phase.CURRENT);
         CompletableFuture<Boolean> verification = CompletableFuture.supplyAsync(() -> {
-                    while (true) {
-                        try {
-                            callbacks.forEach(s -> mockServer.verify(postRequestedFor(urlEqualTo(s))
-                                    .withHeader("Content-Type", equalTo(MediaType.APPLICATION_JSON))
-                                    .withRequestBody(matchingJsonPath("$.decision", containing(decision.getMetadata().getName())))
-                                    .withRequestBody(matchingJsonPath("$.message", containing("some message")))
-                                    .withRequestBody(matchingJsonPath("$.customer", containing(decision.getMetadata().getLabels().get(CUSTOMER_LABEL))))
-                                    .withRequestBody(matchingJsonPath("$.phase", containing(Phase.CURRENT.name())))
-                                    .withRequestBody(matchingJsonPath("$.namespace", containing(decision.getMetadata().getNamespace())))
-                                    .withRequestBody(matchingJsonPath("$.endpoint", containing(decision.getStatus().getEndpoint().toString())))
-                                    .withRequestBody(matchingJsonPath("$.version", containing(decision.getSpec().getDefinition().getVersion())))
-                                    .withRequestBody(matchingJsonPath("$.version_resource", containing("mydecision-1")))
-                            ));
-                            return Boolean.TRUE;
-                        } catch (VerificationException e) {
-                            //Ignore and retry
-                        }
-                        try {
-                            Thread.sleep(200L);
-                        } catch (InterruptedException e) {
-                            return Boolean.FALSE;
-                        }
-                    }
+            while (true) {
+                try {
+                    callbacks.forEach(s -> mockServer.verify(postRequestedFor(urlEqualTo(s))
+                            .withHeader("Content-Type", equalTo(MediaType.APPLICATION_JSON))
+                            .withRequestBody(matchingJsonPath("$.decision", containing(decision.getMetadata().getName())))
+                            .withRequestBody(matchingJsonPath("$.message", containing("some message")))
+                            .withRequestBody(matchingJsonPath("$.customer", containing(decision.getMetadata().getLabels().get(CUSTOMER_LABEL))))
+                            .withRequestBody(matchingJsonPath("$.phase", containing(Phase.CURRENT.name())))
+                            .withRequestBody(matchingJsonPath("$.namespace", containing(decision.getMetadata().getNamespace())))
+                            .withRequestBody(matchingJsonPath("$.endpoint", containing(decision.getStatus().getEndpoint().toString())))
+                            .withRequestBody(matchingJsonPath("$.version", containing(decision.getSpec().getDefinition().getVersion())))
+                            .withRequestBody(matchingJsonPath("$.version_resource", containing("mydecision-1")))));
+                    return Boolean.TRUE;
+                } catch (VerificationException e) {
+                    //Ignore and retry
                 }
-        );
+                try {
+                    Thread.sleep(200L);
+                } catch (InterruptedException e) {
+                    return Boolean.FALSE;
+                }
+            }
+        });
         assertTrue(verification.get(20, TimeUnit.SECONDS));
         assertThat(mockServer.findAllUnmatchedRequests(), empty());
     }
@@ -274,31 +270,29 @@ class RemoteResourceClientTest {
                 .build();
         client.notify(version, webhooks, "some message", Phase.FAILED);
         CompletableFuture<Boolean> verification = CompletableFuture.supplyAsync(() -> {
-                    while (true) {
-                        try {
-                            callbacks.forEach(s -> mockServer.verify(postRequestedFor(urlEqualTo(s))
-                                    .withHeader("Content-Type", equalTo(MediaType.APPLICATION_JSON))
-                                    .withRequestBody(matchingJsonPath("$.decision", containing(version.getMetadata().getLabels().get(DECISION_LABEL))))
-                                    .withRequestBody(matchingJsonPath("$.message", containing("some message")))
-                                    .withRequestBody(matchingJsonPath("$.customer", containing(version.getMetadata().getLabels().get(CUSTOMER_LABEL))))
-                                    .withRequestBody(matchingJsonPath("$.phase", containing(Phase.FAILED.name())))
-                                    .withRequestBody(matchingJsonPath("$.namespace", containing(version.getMetadata().getNamespace())))
-                                    .withRequestBody(matchingJsonPath("$.endpoint", absent()))
-                                    .withRequestBody(matchingJsonPath("$.version", containing(version.getSpec().getVersion())))
-                                    .withRequestBody(matchingJsonPath("$.version_resource", containing(version.getMetadata().getName())))
-                            ));
-                            return Boolean.TRUE;
-                        } catch (VerificationException e) {
-                            //Ignore and retry
-                        }
-                        try {
-                            Thread.sleep(200L);
-                        } catch (InterruptedException e) {
-                            return Boolean.FALSE;
-                        }
-                    }
+            while (true) {
+                try {
+                    callbacks.forEach(s -> mockServer.verify(postRequestedFor(urlEqualTo(s))
+                            .withHeader("Content-Type", equalTo(MediaType.APPLICATION_JSON))
+                            .withRequestBody(matchingJsonPath("$.decision", containing(version.getMetadata().getLabels().get(DECISION_LABEL))))
+                            .withRequestBody(matchingJsonPath("$.message", containing("some message")))
+                            .withRequestBody(matchingJsonPath("$.customer", containing(version.getMetadata().getLabels().get(CUSTOMER_LABEL))))
+                            .withRequestBody(matchingJsonPath("$.phase", containing(Phase.FAILED.name())))
+                            .withRequestBody(matchingJsonPath("$.namespace", containing(version.getMetadata().getNamespace())))
+                            .withRequestBody(matchingJsonPath("$.endpoint", absent()))
+                            .withRequestBody(matchingJsonPath("$.version", containing(version.getSpec().getVersion())))
+                            .withRequestBody(matchingJsonPath("$.version_resource", containing(version.getMetadata().getName())))));
+                    return Boolean.TRUE;
+                } catch (VerificationException e) {
+                    //Ignore and retry
                 }
-        );
+                try {
+                    Thread.sleep(200L);
+                } catch (InterruptedException e) {
+                    return Boolean.FALSE;
+                }
+            }
+        });
         assertTrue(verification.get(20, TimeUnit.SECONDS));
         assertThat(mockServer.findAllUnmatchedRequests(), empty());
     }

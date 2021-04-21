@@ -20,10 +20,6 @@ import java.util.Objects;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
-import io.fabric8.kubernetes.api.model.Condition;
-import io.fabric8.kubernetes.api.model.ConditionBuilder;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.javaoperatorsdk.operator.api.UpdateControl;
 import org.kie.baaas.ccp.api.Decision;
 import org.kie.baaas.ccp.api.DecisionVersion;
 import org.kie.baaas.ccp.api.DecisionVersionStatus;
@@ -32,6 +28,11 @@ import org.kie.baaas.ccp.api.ResourceUtils;
 import org.kie.baaas.ccp.client.RemoteResourceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.fabric8.kubernetes.api.model.Condition;
+import io.fabric8.kubernetes.api.model.ConditionBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.javaoperatorsdk.operator.api.UpdateControl;
 
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_BUILD;
 import static org.kie.baaas.ccp.api.DecisionVersionStatus.CONDITION_READY;

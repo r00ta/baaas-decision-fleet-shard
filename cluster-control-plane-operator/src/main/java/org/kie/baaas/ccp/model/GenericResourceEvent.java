@@ -27,8 +27,8 @@ public class GenericResourceEvent extends AbstractEvent {
     private final Watcher.Action action;
     private final JsonObject resource;
 
-    public GenericResourceEvent(Watcher.Action action, JsonObject resource, EventSource eventSource) {
-        super(JsonResourceUtils.getOwnerUid(resource), eventSource);
+    public GenericResourceEvent(Watcher.Action action, String ownerUid, JsonObject resource, EventSource eventSource) {
+        super(ownerUid, eventSource);
         this.action = action;
         this.resource = resource;
     }

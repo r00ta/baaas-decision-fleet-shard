@@ -92,7 +92,7 @@ public class KogitoService {
         return version.getMetadata().getLabels().get(DECISION_LABEL);
     }
 
-    public static JsonObject buildService(DecisionVersion version) {
+    public static JsonObject build(DecisionVersion version) {
         JsonObjectBuilder specBuilder = Json.createObjectBuilder()
                 .add("image", version.getStatus().getImageRef())
                 .add("replicas", REPLICAS);
@@ -156,12 +156,12 @@ public class KogitoService {
                 .build();
     }
 
-    public void createOrUpdateService(DecisionVersion version) {
+    public void createOrUpdate(DecisionVersion version) {
         if (!isBuilt(version) || !isCurrent(version)) {
             return;
         }
         LOGGER.info("Creating or Updating Kogito Runtime for DecisionVersion {}", version.getMetadata().getName());
-        JsonObject expected = buildService(version);
+        JsonObject expected = build(version);
         createOrUpdateDashboardAuthSecret(version.getMetadata().getNamespace());
         if (version.getSpec().getKafka() != null) {
             createOrUpdateKafkaAuthSecret(version);

@@ -332,7 +332,7 @@ class DecisionControllerTest extends AbstractControllerTest {
     }
 
     private String getKogitoRuntime(DecisionVersion previous) {
-        JsonObject kogitoRuntime = KogitoService.buildService(previous);
+        JsonObject kogitoRuntime = KogitoService.build(previous);
         Condition deployedCondition = new ConditionBuilder().withType("Deployed")
                 .withStatus(ResourceUtils.capitalize(Boolean.TRUE))
                 .build();

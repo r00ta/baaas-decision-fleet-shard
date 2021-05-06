@@ -81,6 +81,7 @@ public class DecisionVersionController implements ResourceController<DecisionVer
 
     public DeleteControl deleteResource(DecisionVersion version, Context<DecisionVersion> context) {
         LOGGER.info("Delete DecisionVersion: {} in namespace {}", version.getMetadata().getName(), version.getMetadata().getNamespace());
+        pipelineService.delete(version);
         eventSourceManager.deRegisterCustomResourceFromEventSource(getEventSourceName(version), version.getMetadata().getUid());
         return DeleteControl.DEFAULT_DELETE;
     }
@@ -90,8 +91,8 @@ public class DecisionVersionController implements ResourceController<DecisionVer
         if (!eventSourceManager.getRegisteredEventSources().containsKey(getEventSourceName(version))) {
             eventSourceManager.registerEventSource(getEventSourceName(version), DecisionEventSource.createAndRegisterWatch(kubernetesClient, version));
         }
-        pipelineService.createOrUpdatePipelineRun(version);
-        kogitoService.createOrUpdateService(version);
+        pipelineService.createOrUpdate(version);
+        kogitoService.createOrUpdate(version);
         return versionService.updateStatus(version);
     }
 

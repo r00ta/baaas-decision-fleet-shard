@@ -20,9 +20,13 @@ import java.util.Optional;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
+import javax.json.JsonReader;
 import javax.json.JsonValue;
 
 import io.fabric8.kubernetes.client.utils.Serialization;
+
+import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
+import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
 
 public class JsonResourceUtils {
 
@@ -129,7 +133,7 @@ public class JsonResourceUtils {
             return null;
         }
         JsonObject result = object;
-        for (int i = 0; i < path.length - 1; i++) {
+        for (var i = 0; i < path.length - 1; i++) {
             JsonValue value = result.get(path[i]);
             if (value == null || !JsonValue.ValueType.OBJECT.equals(value.getValueType())) {
                 return null;
@@ -191,6 +195,12 @@ public class JsonResourceUtils {
     }
 
     public static JsonObject toJson(Object object) {
-        return Json.createReader(new StringReader(Serialization.asJson(object))).readObject();
+        try (JsonReader reader = Json.createReader(new StringReader(Serialization.asJson(object)))) {
+            return reader.readObject();
+        }
+    }
+
+    public static boolean isManagedByController(JsonObject object) {
+        return OPERATOR_NAME.equals(getLabel(object, MANAGED_BY_LABEL));
     }
 }

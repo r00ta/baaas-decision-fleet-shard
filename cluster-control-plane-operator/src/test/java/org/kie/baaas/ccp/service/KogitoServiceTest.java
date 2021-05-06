@@ -79,7 +79,7 @@ import static org.kie.baaas.ccp.service.KogitoService.CLIENTID_KEY;
 import static org.kie.baaas.ccp.service.KogitoService.CLIENTSECRET_KEY;
 import static org.kie.baaas.ccp.service.KogitoService.KOGITO_RUNTIME_CONTEXT;
 import static org.kie.baaas.ccp.service.KogitoService.REPLICAS;
-import static org.kie.baaas.ccp.service.KogitoService.buildService;
+import static org.kie.baaas.ccp.service.KogitoService.build;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -88,6 +88,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 class KogitoServiceTest extends AbstractControllerTest {
 
     private final static String KAFKA_COMMON_AUTH_SECRET = "kafka-common-auth";
+
     @Inject
     KogitoService service;
 
@@ -130,7 +131,7 @@ class KogitoServiceTest extends AbstractControllerTest {
                 .build();
 
         //When
-        service.createOrUpdateService(version);
+        service.createOrUpdate(version);
 
         //Then
         assertThat(client.customResources(KogitoRuntime.class).list().getItems(), empty());
@@ -173,7 +174,7 @@ class KogitoServiceTest extends AbstractControllerTest {
         client.customResources(Decision.class).inNamespace(CUSTOMER_NS).create(decision);
 
         //When
-        service.createOrUpdateService(version);
+        service.createOrUpdate(version);
 
         //Then
         assertThat(client.customResources(KogitoRuntime.class).list().getItems(), empty());
@@ -218,7 +219,7 @@ class KogitoServiceTest extends AbstractControllerTest {
         client.customResources(DecisionVersion.class).inNamespace(CUSTOMER_NS).create(version);
 
         //When
-        service.createOrUpdateService(version);
+        service.createOrUpdate(version);
 
         //Then
         assertThat(client.secrets().inNamespace(version.getMetadata().getNamespace()).withName(BAAAS_DASHBOARD_AUTH_SECRET).get(), notNullValue());
@@ -282,7 +283,7 @@ class KogitoServiceTest extends AbstractControllerTest {
                 .build();
 
         version.getStatus().setImageRef("replace-me");
-        JsonObject existing = addCondition(buildService(version), new ConditionBuilder().withType("Provisioning").withStatus("True").build());
+        JsonObject existing = addCondition(build(version), new ConditionBuilder().withType("Provisioning").withStatus("True").build());
         version.getStatus().setImageRef(expectedImageRef);
 
         client.secrets().inNamespace(CONTROLLER_NS).create(dashboardSecret);
@@ -291,7 +292,7 @@ class KogitoServiceTest extends AbstractControllerTest {
         client.customResource(KOGITO_RUNTIME_CONTEXT).create(decision.getMetadata().getNamespace(), existing.toString());
 
         //When
-        service.createOrUpdateService(version);
+        service.createOrUpdate(version);
 
         //Then
         assertThat(client.secrets().inNamespace(version.getMetadata().getNamespace()).withName(BAAAS_DASHBOARD_AUTH_SECRET).get(), notNullValue());
@@ -338,7 +339,7 @@ class KogitoServiceTest extends AbstractControllerTest {
                         .setKogitoServiceRef(decision.getMetadata().getName()))
                 .build();
 
-        JsonObject existing = addCondition(buildService(version), new ConditionBuilder().withType("Deployed").withStatus("True").build());
+        JsonObject existing = addCondition(build(version), new ConditionBuilder().withType("Deployed").withStatus("True").build());
 
         client.secrets().inNamespace(CONTROLLER_NS).create(dashboardSecret);
         client.customResources(Decision.class).inNamespace(CUSTOMER_NS).create(decision);
@@ -346,7 +347,7 @@ class KogitoServiceTest extends AbstractControllerTest {
         client.customResource(KOGITO_RUNTIME_CONTEXT).create(decision.getMetadata().getNamespace(), existing.toString());
 
         //When
-        service.createOrUpdateService(version);
+        service.createOrUpdate(version);
 
         //Then
         assertThat(client.secrets().inNamespace(version.getMetadata().getNamespace()).withName(BAAAS_DASHBOARD_AUTH_SECRET).get(), notNullValue());
@@ -418,7 +419,7 @@ class KogitoServiceTest extends AbstractControllerTest {
         client.customResources(DecisionVersion.class).inNamespace(CUSTOMER_NS).create(version);
 
         //When
-        service.createOrUpdateService(version);
+        service.createOrUpdate(version);
 
         //Then
         String expectedKafkaSecretName = "some-decision-1-kafka-auth";

@@ -17,6 +17,7 @@ package org.kie.baaas.ccp.controller;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.Map;
+import java.util.Objects;
 
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -35,6 +36,14 @@ import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
 
 import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
+import static org.kie.baaas.ccp.controller.DecisionLabels.OWNER_UID_LABEL;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getLabel;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getName;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getNamespace;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getOwnerUid;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getResourceVersion;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getUID;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.isManagedByController;
 
 public class GenericResourceEventSource extends AbstractEventSource implements Watcher<String> {
 
@@ -82,20 +91,28 @@ public class GenericResourceEventSource extends AbstractEventSource implements W
                         "Skipping {} event for {} uid: {}, version: {}",
                         action,
                         context.getName(),
-                        JsonResourceUtils.getUID(object),
-                        JsonResourceUtils.getResourceVersion(object));
+                        getUID(object),
+                        getResourceVersion(object));
                 return;
             }
-            if (JsonResourceUtils.getOwnerUid(object) == null) {
-                LOGGER.info("Ignoring event for not owned resource {} uid: {}", context.getName(), JsonResourceUtils.getUID(object));
+            if (!isManagedByController(object)) {
+                LOGGER.info("Ignoring event for not owned resource {} uid: {}", context.getName(), getUID(object));
                 return;
             }
-            LOGGER.debug("Handling event for {} uid: {}, ownerUid: {}, version: {}",
-                    context.getName(),
-                    JsonResourceUtils.getUID(object),
-                    JsonResourceUtils.getOwnerUid(object),
-                    JsonResourceUtils.getResourceVersion(object));
-            eventHandler.handleEvent(new GenericResourceEvent(action, object, this));
+            String ownerUid = getOwnerUid(object);
+            if (Objects.equals(client.getNamespace(), JsonResourceUtils.getNamespace(object))) {
+                ownerUid = getLabel(object, OWNER_UID_LABEL);
+            }
+            if (ownerUid == null) {
+                LOGGER.warn("Unable to retrieve Owner UID. Ignoring event {} {}/{}", getNamespace(object), object.getString("kind"), getName(object));
+            } else {
+                LOGGER.debug("Handling event for {} uid: {}, ownerUid: {}, version: {}",
+                        context.getName(),
+                        getUID(object),
+                        ownerUid,
+                        getResourceVersion(object));
+                eventHandler.handleEvent(new GenericResourceEvent(action, ownerUid, object, this));
+            }
         }
     }
 

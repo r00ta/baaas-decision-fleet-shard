@@ -51,6 +51,7 @@ import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_REQUEST_LABEL
 import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getConditionStatus;
+import static org.kie.baaas.ccp.service.JsonResourceUtils.getName;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getStatus;
 import static org.kie.baaas.ccp.service.KogitoService.KOGITO_RUNTIME_CONTEXT;
 

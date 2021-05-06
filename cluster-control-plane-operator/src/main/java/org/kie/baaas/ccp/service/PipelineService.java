@@ -23,7 +23,6 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonArray;
-import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
@@ -46,6 +45,7 @@ import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_NAMESPACE_LAB
 import static org.kie.baaas.ccp.controller.DecisionLabels.DECISION_VERSION_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.ccp.controller.DecisionLabels.OPERATOR_NAME;
+import static org.kie.baaas.ccp.controller.DecisionLabels.OWNER_UID_LABEL;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.buildEnvValue;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getCondition;
 import static org.kie.baaas.ccp.service.JsonResourceUtils.getName;
@@ -89,9 +89,7 @@ public class PipelineService {
         return version.getMetadata().getLabels().get(CUSTOMER_LABEL) + "-" + version.getMetadata().getName();
     }
 
-    public static JsonObject buildPipelineRun(String namespace, DecisionVersion version) {
-        JsonArrayBuilder ownerRefs = Json.createArrayBuilder()
-                .add(JsonResourceUtils.toJson(version.getOwnerReference()));
+    public static JsonObject build(String namespace, DecisionVersion version) {
         return Json.createObjectBuilder()
                 .add("apiVersion", PIPELINE_RUN_CONTEXT.getGroup() + "/" + PIPELINE_RUN_CONTEXT.getVersion())
                 .add("kind", PIPELINE_RUN_CONTEXT.getKind())
@@ -104,9 +102,9 @@ public class PipelineService {
                                 .add(DECISION_LABEL, version.getMetadata().getLabels().get(DECISION_LABEL))
                                 .add(CUSTOMER_LABEL, version.getMetadata().getLabels().get(CUSTOMER_LABEL))
                                 .add(DECISION_NAMESPACE_LABEL, version.getMetadata().getNamespace())
+                                .add(OWNER_UID_LABEL, version.getMetadata().getUid())
                                 .add(MANAGED_BY_LABEL, OPERATOR_NAME)
                                 .build())
-                        .add("ownerReferences", ownerRefs)
                         .build())
                 .add("spec", Json.createObjectBuilder()
                         .add("pipelineRef", Json.createObjectBuilder()
@@ -117,11 +115,6 @@ public class PipelineService {
                                 .add(buildEnvValue(VAR_PROPS_CONFIGMAP, getPropsConfigMapName(version.getSpec())))
                                 .add(buildEnvValue(VAR_DMN_LOCATION, version.getSpec().getSource().toString()))
                                 .add(buildEnvValue(VAR_REGISTRY_LOCATION, buildImageRef(version)))
-                                .build())
-                        .add("podTemplate", Json.createObjectBuilder()
-                                .add("securityContext", Json.createObjectBuilder()
-                                        .add("fsGroup", 1001)
-                                        .build())
                                 .build())
                         .build())
                 .build();
@@ -150,9 +143,9 @@ public class PipelineService {
                 version.getSpec().getVersion());
     }
 
-    public void createOrUpdatePipelineRun(DecisionVersion version) {
+    public void createOrUpdate(DecisionVersion version) {
         try {
-            JsonObject expected = PipelineService.buildPipelineRun(client.getNamespace(), version);
+            JsonObject expected = PipelineService.build(client.getNamespace(), version);
             JsonObject pipelineRuns = Json.createObjectBuilder(client.customResource(PIPELINE_RUN_CONTEXT)
                     .list(client.getNamespace(), Map.of(
                             DECISION_VERSION_LABEL, version.getMetadata().getName(),
@@ -196,6 +189,19 @@ public class PipelineService {
                     Boolean.FALSE,
                     succeeded.getString(PIPELINE_REASON),
                     succeeded.getString(PIPELINE_MESSAGE));
+        }
+    }
+
+    public void delete(DecisionVersion version) {
+        try {
+            if (!client.customResource(PIPELINE_RUN_CONTEXT).list(client.getNamespace(), Map.of(OWNER_UID_LABEL, version.getMetadata().getUid())).isEmpty()) {
+                LOGGER.debug("Cleaning up PipelineRun with name {} for DecisionVersion {}", getPipelineRunName(version), version.getMetadata().getName());
+                client.customResource(PIPELINE_RUN_CONTEXT).delete(client.getNamespace(), getPipelineRunName(version));
+            } else {
+                LOGGER.debug("Missing PipelineRun with name {} for DecisionVersion {}. Ignoring.", getPipelineRunName(version), version.getMetadata().getName());
+            }
+        } catch (IOException e) {
+            LOGGER.warn("Unable to clean up PipelineRun with name {} for DecisionVersion {}", getPipelineRunName(version), version.getMetadata().getName(), e);
         }
     }
 }

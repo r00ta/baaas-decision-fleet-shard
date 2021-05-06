@@ -22,6 +22,7 @@ public class DecisionLabels {
     public static final String DECISION_NAMESPACE_LABEL = "org.kie.baaas/decisionnamespace";
     public static final String DECISION_REQUEST_LABEL = "org.kie.baaas/decisionrequest";
     public static final String DECISION_VERSION_LABEL = "org.kie.baaas/decisionversion";
+    public static final String OWNER_UID_LABEL = "org.kie.baaas/owneruid";
     public static final String CUSTOMER_LABEL = "org.kie.baaas/customer";
     public static final String BAAAS_RESOURCE_LABEL = "org.kie.baaas/resource";
     public static final String BAAAS_RESOURCE_KOGITO_SERVICE = "kogitoservice";

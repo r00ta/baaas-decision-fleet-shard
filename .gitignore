@@ -5,3 +5,8 @@ target
 .project
 .settings
 .factorypath
+
+# Test user credentials and registry auth
+user-credentials.sh
+registry-auth.json
+user-pull-secret.yaml

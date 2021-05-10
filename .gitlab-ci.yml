@@ -2,7 +2,7 @@
 variables:
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=/maven/.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
   MAVEN_CLI_OPTS: "-s $CI_PROJECT_DIR/.ci/settings.xml --batch-mode"
-  OUTPUT_CONTAINER_NAME: "quay.io/rblake/baaas-cluster-control-plane:$CI_COMMIT_SHA"
+  OUTPUT_CONTAINER_NAME: "quay.io/rblake/baaas-decision-fleet-shard:$CI_COMMIT_SHA"
 
 stages:
   - build
@@ -16,7 +16,7 @@ stages:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
       - api/target
-      - cluster-control-plane-operator/target
+      - decision-fleet-shard-operator/target
 
 build:
   <<: *cache-definition
@@ -27,8 +27,8 @@ build:
   tags:
     - baaas
   only:
-    - main@baaas/baaas-cluster-control-plane
-    - merge_requests@baaas/baaas-cluster-control-plane
+    - main@baaas/baaas-decision-fleet-shard
+    - merge_requests@baaas/baaas-decision-fleet-shard
 
 test:
   <<: *cache-definition
@@ -44,8 +44,8 @@ test:
   tags:
     - baaas
   only:
-    - main@baaas/baaas-cluster-control-plane
-    - merge_requests@baaas/baaas-cluster-control-plane
+    - main@baaas/baaas-decision-fleet-shard
+    - merge_requests@baaas/baaas-decision-fleet-shard
 
 deploy-jars:
   <<: *cache-definition
@@ -56,7 +56,7 @@ deploy-jars:
   tags:
     - baaas
   only:
-    - main@baaas/baaas-cluster-control-plane
+    - main@baaas/baaas-decision-fleet-shard
 
 native-compile:
   <<: *cache-definition
@@ -67,12 +67,12 @@ native-compile:
   artifacts:
     expire_in: 1 day
     paths:
-      - cluster-control-plane-operator/target/*-runner
+      - decision-fleet-shard-operator/target/*-runner
   tags:
     - baaas
   only:
-    - main@baaas/baaas-cluster-control-plane
-    - merge_requests@baaas/baaas-cluster-control-plane
+    - main@baaas/baaas-decision-fleet-shard
+    - merge_requests@baaas/baaas-decision-fleet-shard
 
 build-and-push-container-jvm:
   <<: *cache-definition
@@ -81,14 +81,14 @@ build-and-push-container-jvm:
   before_script:
     - echo "$CONTAINER_REGISTRY_PASSWORD" | docker login quay.io --username $CONTAINER_REGISTRY_USER --password-stdin
   script:
-    - "docker build -f cluster-control-plane-operator/src/main/docker/Dockerfile.jvm -t $OUTPUT_CONTAINER_NAME-jvm cluster-control-plane-operator/"
+    - "docker build -f decision-fleet-shard-operator/src/main/docker/Dockerfile.jvm -t $OUTPUT_CONTAINER_NAME-jvm decision-fleet-shard-operator/"
     - "docker push $OUTPUT_CONTAINER_NAME-jvm"
   after_script:
     - "docker image rm -f $OUTPUT_CONTAINER_NAME-jvm"
   tags:
     - baaas
   only:
-    - main@baaas/baaas-cluster-control-plane
+    - main@baaas/baaas-decision-fleet-shard
 
 build-and-push-container-native:
   image: docker:19.03.12
@@ -96,11 +96,11 @@ build-and-push-container-native:
   before_script:
     - echo "$CONTAINER_REGISTRY_PASSWORD" | docker login quay.io --username $CONTAINER_REGISTRY_USER --password-stdin
   script:
-    - "docker build -f cluster-control-plane-operator/src/main/docker/Dockerfile.native -t $OUTPUT_CONTAINER_NAME cluster-control-plane-operator/"
+    - "docker build -f decision-fleet-shard-operator/src/main/docker/Dockerfile.native -t $OUTPUT_CONTAINER_NAME decision-fleet-shard-operator/"
     - "docker push $OUTPUT_CONTAINER_NAME"
   after_script:
     - "docker image rm -f $OUTPUT_CONTAINER_NAME"
   tags:
     - baaas
   only:
-    - main@baaas/baaas-cluster-control-plane
+    - main@baaas/baaas-decision-fleet-shard

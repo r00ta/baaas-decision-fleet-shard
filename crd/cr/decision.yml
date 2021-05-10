@@ -1,26 +1,20 @@
----
+apiVersion: operator.baaas/v1alpha1
 kind: Decision
-version: org.kie.baaas/v1Alpha1
 metadata:
-  name: 'my-decision'
+  name: example-decision
+  namespace: baaas-customer1
+  finalizers:
+    - decisions.operator.baaas/finalizer
   labels:
-    org.kie.baaas/customer: '1'
-    org.kie.baaas/decisionrequest: 'my-decision-request'
+    app.kubernetes.io/managed-by: decision-fleet-shard-operator
+    org.kie.baaas/customer: customer1
+    org.kie.baaas/decisionrequest: example-decision-request
 spec:
   definition:
-    name: 'my-decision'
-    version: '1'
-    source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
-    kafka:
-      bootstrapServers: 'my-kafka-bootstrap:9092,other-bootstrap:9092'
-      secretName: 'my-kafka-secret'
-      incomingTopic: 'incomingTopic'
-      outgoingTopic: 'outgoingTopic'
-    env:
-      - FOO=example
-      - BAR=baz
+    source: s3://baaas-storage-dev/customers/customer1/example-decision/1/dmn.xml
+    version: "1"
   webhooks:
-    - 'https://url-of-mcp.internal.baaas.redhat.com/callbacks'
+    - http://localhost:18080/callback
 status:
-  endpoint: 'https://my-decision.baaas.redhat.com'
-  currentVersion: '4'
+  endpoint: http://example-decision-baaas-customer1.apps.mw-ocp4.cloud.lab.eng.bos.redhat.com
+  versionId: "1"

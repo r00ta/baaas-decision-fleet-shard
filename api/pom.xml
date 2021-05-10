@@ -4,11 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.kie.baaas.ccp</groupId>
-        <artifactId>baaas-cluster-control-plane</artifactId>
+        <groupId>org.kie.baaas.dfs</groupId>
+        <artifactId>baaas-decision-fleet-shard</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
-    <artifactId>baaas-cluster-control-plane-api</artifactId>
+    <artifactId>baaas-decision-fleet-shard-api</artifactId>
     <dependencies>
         <dependency>
             <groupId>io.javaoperatorsdk</groupId>

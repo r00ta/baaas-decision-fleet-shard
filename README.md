@@ -1,4 +1,4 @@
-# BAaaS Operators
+# Decision Fleet Shard
 
 ## Requirements
 
@@ -23,9 +23,9 @@ $ mvn clean install -Pnative -Dquarkus.native.container-build=true
 ### Create container from the native build
 
 ```shell script
-podman build -t quay.io/ruben/baaas-cluster-control-plane:latest \
- -f cluster-control-plane-operator/src/main/docker/Dockerfile.native \
- cluster-control-plane-operator
+podman build -t quay.io/ruben/baaas-decision-fleet-shard:latest \
+ -f decision-fleet-shard-operator/src/main/docker/Dockerfile.native \
+ decision-fleet-shard-operator
 ```
 
 ## Run on CodeReady Containers
@@ -54,7 +54,7 @@ First log in as an administrator and create the project in which the operator wi
 This is where we are going to create the DecisionRequests.
 
 ```shell script
-$ oc new-project baaas-cluster-cp
+$ oc new-project baaas-dfs
 ```
 
 ## Install the dependencies

@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: cluster-cp
+  name: decision-fleet-shard
 spec:
   selector:
     matchLabels:
-      app: cluster-cp
+      app: decision-fleet-shard
   replicas: 1
   template:
     metadata:
       labels:
-        app: cluster-cp
+        app: decision-fleet-shard
     spec:
-      serviceAccountName: cluster-cp
+      serviceAccountName: decision-fleet-shard
       containers:
-        - image: quay.io/ruben/baaas-cluster-control-plane:latest
+        - image: quay.io/ruben/baaas-decision-fleet-shard:latest
           imagePullPolicy: Always
-          name: cluster-cp
+          name: decision-fleet-shard

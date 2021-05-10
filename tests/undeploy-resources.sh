@@ -11,12 +11,12 @@ __root="$(cd "$(dirname "${__dir}")" && pwd)"
 __target="${__root}/target"
 __pull_secret="${__dir}/user-pull-secret.yaml"
 
-kubectl delete cm baaas-ccp-build-application-kafka-props baaas-ccp-build-application-props \
-  baaas-ccp-build-pom-kafka-xml baaas-ccp-build-pom-xml baaas-ccp-build-dockerfile || true
+kubectl delete cm baaas-dfs-build-application-kafka-props baaas-dfs-build-application-props \
+  baaas-dfs-build-pom-kafka-xml baaas-dfs-build-pom-xml baaas-dfs-build-dockerfile || true
 
-kubectl delete pipeline,task baaas-ccp-decision-build || true
+kubectl delete pipeline,task baaas-dfs-decision-build || true
 
-kubectl delete secrets baaas-ccp-build-aws-credentials baaas-ccp-build-registry-push-token baaas-ccp-kafka-credentials || true
+kubectl delete secrets baaas-dfs-build-aws-credentials baaas-dfs-build-registry-push-token baaas-dfs-kafka-credentials || true
 
 
 

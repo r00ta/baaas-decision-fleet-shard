@@ -10,9 +10,9 @@ __dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 __root="$(cd "$(dirname "${__dir}")" && pwd)"
 __target="${__root}/target"
 __gitremote="$(git remote get-url origin)"
-__infra_repo="${__gitremote/baaas-cluster-control-plane/baaas-infra}"
+__infra_repo="${__gitremote/baaas-decision-fleet-shard/baaas-infra}"
 __infra_path="${__target}/baaas-infra"
-__pipeline_resources="${__infra_path}/base/cluster-cp/resources/build-pipeline/"
+__pipeline_resources="${__infra_path}/base/dfs/resources/build-pipeline/"
 __credentials="${__dir}/user-credentials.sh"
 __registry_auth="${__dir}/registry-auth.json"
 __pull_secret="${__dir}/user-pull-secret.yaml"
@@ -22,11 +22,11 @@ deploy_crds () {
 }
 
 create_cms () {
-  kubectl create cm baaas-ccp-build-application-kafka-props --from-file=application.properties="${__pipeline_resources}"/application-kafka.properties || true
-  kubectl create cm baaas-ccp-build-application-props --from-file="${__pipeline_resources}"/application.properties || true
-  kubectl create cm baaas-ccp-build-pom-kafka-xml --from-file=pom.xml="${__pipeline_resources}"/pom-kafka.xml || true
-  kubectl create cm baaas-ccp-build-pom-xml --from-file="${__pipeline_resources}"/pom.xml || true
-  kubectl create cm baaas-ccp-build-dockerfile --from-file="${__pipeline_resources}"/Dockerfile || true
+  kubectl create cm baaas-dfs-build-application-kafka-props --from-file=application.properties="${__pipeline_resources}"/application-kafka.properties || true
+  kubectl create cm baaas-dfs-build-application-props --from-file="${__pipeline_resources}"/application.properties || true
+  kubectl create cm baaas-dfs-build-pom-kafka-xml --from-file=pom.xml="${__pipeline_resources}"/pom-kafka.xml || true
+  kubectl create cm baaas-dfs-build-pom-xml --from-file="${__pipeline_resources}"/pom.xml || true
+  kubectl create cm baaas-dfs-build-dockerfile --from-file="${__pipeline_resources}"/Dockerfile || true
 }
 
 create_pipeline () {
@@ -36,15 +36,15 @@ create_pipeline () {
 
 create_user_credentials () {
   # from user-credentials.sh file
-  kubectl create secret generic baaas-ccp-build-aws-credentials \
+  kubectl create secret generic baaas-dfs-build-aws-credentials \
     --from-literal=AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
     --from-literal=AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION}" \
     --from-literal=AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" || true
 
-  kubectl create secret generic baaas-ccp-build-registry-push-token \
+  kubectl create secret generic baaas-dfs-build-registry-push-token \
     --from-file=${__registry_auth} || true
 
-  kubectl create secret generic baaas-ccp-kafka-credentials \
+  kubectl create secret generic baaas-dfs-kafka-credentials \
     --from-literal=bootstrapservers=${KAFKA_SERVER} \
     --from-literal=clientid=${KAFKA_CLIENT_ID} \
     --from-literal=clientsecret=${KAFKA_CLIENT_SECRET} || true

@@ -1,28 +1,21 @@
----
-kind: DecisionRequest
-version: org.kie.baaas/v1Alpha1
-metadata:
-  name: '<customer_id>-<decision_name>-<decision_version>'  # Not required to be this way, but this is what MCP will do
-spec:
-  customerId: '1'
-  decision:
-    name: 'my-decision'
-    version: '1'
-    source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
-    kafka:
-      bootstrapServers: 'my-kafka-bootstrap:9092,other-bootstrap:9092'
-      secretName: 'my-kafka-secret'
-      incomingTopic: 'incomingTopic'
-      outgoingTopic: 'outgoingTopic'
-    env:
-      - FOO=example
-      - BAR=baz
-  webhooks:
-    - 'https://url-of-mcp.internal.baaas.redhat.com/callbacks'
-status:
-  versionRef:
-    name: 'my-decision' # The Decision instance created to deploy this request
-    version: '1' #The DecisionVersion instance created to deploy this request
-    namespace: 'baaas-customer-1' # The namespace created by the CCP for this customer
-  state: (SUCCESS|REJECTED)
-  message: 'Accepted because... || Rejected because...'
+apiVersion: operator.baaas/v1alpha1
+  kind: DecisionRequest
+  metadata:
+    name: example-decision-request
+    namespace: baaas-dfs-demo
+    finalizers:
+      - decisionrequests.operator.baaas/finalizer
+  spec:
+    customerId: customer1
+    definition:
+      source: s3://baaas-storage-dev/customers/customer1/example-decision/1/dmn.xml
+      version: "1"
+    name: example-decision
+    webhooks:
+      - http://manager.example.com:18080/callback
+  status:
+    state: SUCCESS
+    versionRef:
+      name: example-decision
+      namespace: baaas-customer1
+      version: "1"

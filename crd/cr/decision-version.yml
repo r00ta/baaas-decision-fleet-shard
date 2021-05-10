@@ -1,35 +1,39 @@
----
+apiVersion: operator.baaas/v1alpha1
 kind: DecisionVersion
-version: org.kie.baaas/v1Alpha1
 metadata:
-  name: 'my-decision-version-1'
+  name: example-decision-1
+  namespace: baaas-customer1
+  finalizers:
+    - decisionversions.operator.baaas/finalizer
   labels:
-    org.kie.baaas/customer: '1'
-    org.kie.baaas/decision: 'my-decision'
+    app.kubernetes.io/managed-by: decision-fleet-shard-operator
+    org.kie.baaas/customer: customer1
+    org.kie.baaas/decision: example-decision
+  ownerReferences:
+    - apiVersion: operator.baaas/v1alpha1
+      controller: true
+      kind: Decision
+      name: example-decision
+      uid: 771ac62e-ad99-4cec-afe8-c71d55cd05ea
 spec:
-  version: '1'
-  source:
-    uri: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
-  env:
-    - FOO=example
-    - BAR=baz
-  kafka:
-    bootstrapServers: 'my-kafka-bootstrap:9092, other-bootstrap:9092'
-    secretName: 'my-kafka-secret'
-    incoming: 'incomingTopic'
-    outgoing: 'outgoingTopic'
+  source: s3://baaas-storage-dev/customers/customer1/example-decision/1/dmn.xml
+  version: "1"
 status:
-  pipelineRef: 'reference to the pipeline'
-  imageRef: 'reference to the image for this version'
-  kogitoServiceRef: ' reference to the KogitoService CRD for this version'
   conditions:
-    - lastTransitionTime: "2021-02-08T11:07:37.561986Z"
-      message: ""
-      reason: ""
-      status: "False"
+    - lastTransitionTime: Thu May 06 15:20:39 CEST 2021
+      reason: Success
+      status: "True"
       type: Ready
-    - lastTransitionTime: "2021-02-08T11:07:38.517975Z"
-      message: 'Tasks Completed: 0 (Failed: 0, Cancelled 0), Incomplete: 1, Skipped: 0'
-      reason: Running
-      status: "False"
+    - lastTransitionTime: Thu May 06 15:20:15 CEST 2021
+      message: ""
+      reason: Success
+      status: "True"
       type: Build
+    - lastTransitionTime: Thu May 06 15:20:39 CEST 2021
+      message: ""
+      reason: Deployed
+      status: "True"
+      type: Service
+  imageRef: quay.io/ruben/baaas-decision-builds:baaas-customer1-example-decision-1
+  kogitoServiceRef: example-decision
+  pipelineRef: customer1-example-decision-1

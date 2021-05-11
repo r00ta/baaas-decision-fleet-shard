@@ -116,7 +116,6 @@ public class KogitoService {
                         CLIENTSECRET_KEY,
                         BAAAS_DASHBOARD_AUTH_SECRET));
         if (version.getSpec().getKafka() != null) {
-            specBuilder.add("propertiesConfigMap", version.getMetadata().getName());
             envBuilder
                     .add(buildEnvValueFromSecret(
                             BAAAS_KAFKA_CLIENTID,
@@ -302,6 +301,7 @@ public class KogitoService {
                             .withName(getKafkaSecretName(version))
                             .addToLabels(DECISION_VERSION_LABEL, version.getMetadata().getName())
                             .addToLabels(DECISION_LABEL, version.getMetadata().getLabels().get(DECISION_LABEL))
+                            .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
                             .withOwnerReferences(version.getOwnerReference())
                             .build())
                     .withData(vault.getData())

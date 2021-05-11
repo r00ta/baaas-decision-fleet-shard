@@ -90,7 +90,7 @@ public class PipelineService {
     }
 
     public static JsonObject build(String namespace, DecisionVersion version) {
-        JsonObject build = Json.createObjectBuilder()
+        return Json.createObjectBuilder()
                 .add("apiVersion", PIPELINE_RUN_CONTEXT.getGroup() + "/" + PIPELINE_RUN_CONTEXT.getVersion())
                 .add("kind", PIPELINE_RUN_CONTEXT.getKind())
                 .add("metadata", Json.createObjectBuilder()
@@ -118,18 +118,17 @@ public class PipelineService {
                                 .build())
                         .build())
                 .build();
-        return build;
     }
 
     public static String getPomConfigMapName(DecisionVersionSpec spec) {
-        if (spec.getKafka() != null && spec.getKafka() != null) {
+        if (spec.getKafka() != null) {
             return KAFKA_POM_XML_CONFIGMAP;
         }
         return POM_XML_CONFIGMAP;
     }
 
     public static String getPropsConfigMapName(DecisionVersionSpec spec) {
-        if (spec.getKafka() != null && spec.getKafka() != null) {
+        if (spec.getKafka() != null) {
             return KAFKA_APP_PROPS_CONFIGMAP;
         }
         return APP_PROPS_CONFIGMAP;

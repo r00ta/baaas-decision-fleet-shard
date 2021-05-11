@@ -59,10 +59,11 @@ import static org.kie.baaas.dfs.api.DecisionConstants.SERVER_ERROR;
 import static org.kie.baaas.dfs.api.DecisionConstants.VALIDATION_ERROR;
 import static org.kie.baaas.dfs.api.DecisionConstants.VERSION_BUILD_FAILED;
 import static org.kie.baaas.dfs.api.DecisionVersionStatus.REASON_FAILED;
-import static org.kie.baaas.dfs.controller.DecisionLabels.*;
 import static org.kie.baaas.dfs.controller.DecisionLabels.CUSTOMER_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_REQUEST_LABEL;
+import static org.kie.baaas.dfs.controller.DecisionLabels.MANAGED_BY_LABEL;
+import static org.kie.baaas.dfs.controller.DecisionLabels.OPERATOR_NAME;
 
 @Controller
 @ApplicationScoped

@@ -40,6 +40,7 @@ import static org.kie.baaas.dfs.api.DecisionVersionStatus.CONDITION_SERVICE;
 import static org.kie.baaas.dfs.api.DecisionVersionStatus.REASON_FAILED;
 import static org.kie.baaas.dfs.api.DecisionVersionStatus.REASON_SUCCESS;
 import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_LABEL;
+import static org.kie.baaas.dfs.service.JsonResourceUtils.getStatus;
 
 @ApplicationScoped
 public class DecisionVersionService {

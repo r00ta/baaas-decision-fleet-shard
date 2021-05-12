@@ -81,6 +81,7 @@ public class RemoteResourceClient {
                     .withAt(ResourceUtils.now())
                     .withMessage(message)
                     .withVersion(version.getSpec().getVersion())
+                    .withEndpoint(version.getStatus().getEndpoint())
                     .withNamespace(version.getMetadata().getNamespace())
                     .withVersionResource(version.getMetadata().getName())
                     .withPhase(phase)
@@ -96,10 +97,10 @@ public class RemoteResourceClient {
         endpoints.forEach(e -> {
             Response response = client.target(e).request(MediaType.APPLICATION_JSON).post(Entity.json(event));
             if (response.getStatus() < Response.Status.BAD_REQUEST.getStatusCode()) {
-                LOGGER.debug("Successfully emitted webhook to URI: {}", e);
+                LOGGER.debug("Successfully emitted webhook to URI: {} with payload {}", e, Entity.json(event));
                 return;
             }
-            LOGGER.warn("Unable to emit webhook to URI: {}. Received: {}", e, response.getStatus());
+            LOGGER.warn("Unable to emit webhook to URI: {} with payload {}. Received: {}", e, Entity.json(event), response.getStatus());
         });
     }
 }

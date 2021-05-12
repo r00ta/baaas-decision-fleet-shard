@@ -15,13 +15,10 @@
 
 package org.kie.baaas.dfs.controller;
 
-import java.net.URI;
 import java.util.Objects;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.json.Json;
-import javax.json.JsonObject;
 
 import org.kie.baaas.dfs.api.Decision;
 import org.kie.baaas.dfs.api.DecisionRequest;
@@ -49,10 +46,6 @@ import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_REQUEST_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.OPERATOR_NAME;
-import static org.kie.baaas.dfs.service.JsonResourceUtils.getConditionStatus;
-import static org.kie.baaas.dfs.service.JsonResourceUtils.getOwnerUid;
-import static org.kie.baaas.dfs.service.JsonResourceUtils.getStatus;
-import static org.kie.baaas.dfs.service.KogitoService.KOGITO_RUNTIME_CONTEXT;
 
 @Controller(namespaces = ControllerConfiguration.WATCH_ALL_NAMESPACES_MARKER)
 @ApplicationScoped
@@ -108,28 +101,22 @@ public class DecisionController implements ResourceController<Decision> {
             LOGGER.error("Unable to retrieve DecisionVersion {}", expected.getMetadata().getName(), e);
             throw e;
         }
+
         if (version == null || !Objects.equals(expected.getSpec(), version.getSpec())) {
             version = client.customResources(DecisionVersion.class)
                     .inNamespace(namespace)
                     .createOrReplace(expected);
         }
-        if (Boolean.parseBoolean(version.getStatus().isReady()) && version.getStatus().getKogitoServiceRef() != null) {
-            try {
-                JsonObject kogitoRuntime = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
-                        .get(namespace, version.getStatus().getKogitoServiceRef())).build();
-                boolean deployed = getConditionStatus(kogitoRuntime, "Deployed");
-                if (Objects.equals(version.getMetadata().getUid(), getOwnerUid(kogitoRuntime)) && deployed) {
-                    decision.getStatus().setEndpoint(URI.create(getStatus(kogitoRuntime).getString("externalURI")));
-                    decision.getStatus().setVersionId(version.getSpec().getVersion());
-                    resourceClient.notify(decision, version.getMetadata().getName(), null, Phase.CURRENT);
-                    return UpdateControl.updateStatusSubResource(decision);
-                }
 
-            } catch (KubernetesClientException e) {
-                LOGGER.warn("Unable to retrieve KogitoRuntime {} for DecisionVersion {}",
-                        version.getStatus().getKogitoServiceRef(),
-                        version.getMetadata().getName(), e);
+        if (Boolean.parseBoolean(version.getStatus().isReady()) && version.getStatus().getKogitoServiceRef() != null) {
+            // TODO: create or update the "current" route for the decision. See https://issues.redhat.com/browse/BAAAS-212
+            // createOrUpdate route with version.getStatus().getKogitoServiceRef());
+            // For the time being, let's return the version endpoint contained in the decisionVersion CRD.
+            if (version.getStatus().getEndpoint() != null) {
+                decision.getStatus().setEndpoint(version.getStatus().getEndpoint());
+                resourceClient.notify(decision, version.getMetadata().getName(), null, Phase.CURRENT);
             }
+            return UpdateControl.updateStatusSubResource(decision);
         }
         return UpdateControl.noUpdate();
     }

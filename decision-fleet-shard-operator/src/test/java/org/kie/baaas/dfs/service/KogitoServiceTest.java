@@ -225,7 +225,7 @@ class KogitoServiceTest extends AbstractControllerTest {
         assertThat(client.secrets().inNamespace(version.getMetadata().getNamespace()).withName(BAAAS_DASHBOARD_AUTH_SECRET).get(), notNullValue());
         KogitoRuntime runtime = client.customResources(KogitoRuntime.class)
                 .inNamespace(version.getMetadata().getNamespace())
-                .withName(decision.getMetadata().getName()).get();
+                .withName(version.getMetadata().getName()).get();
         assertThat(runtime, notNullValue());
         assertThat(runtime.getMetadata().getLabels(), aMapWithSize(4));
         assertThat(runtime.getMetadata().getLabels(), hasEntry(BAAAS_RESOURCE_LABEL, BAAAS_RESOURCE_KOGITO_SERVICE));
@@ -243,7 +243,7 @@ class KogitoServiceTest extends AbstractControllerTest {
                         || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTSECRET, CLIENTSECRET_KEY))
 
                 , is(true));
-        assertThat(version.getStatus().getKogitoServiceRef(), is(decision.getMetadata().getName()));
+        assertThat(version.getStatus().getKogitoServiceRef(), is(version.getMetadata().getName()));
         verify(versionService, times(1)).setServiceStatus(version, Boolean.FALSE, "Unknown", "");
     }
 
@@ -283,7 +283,7 @@ class KogitoServiceTest extends AbstractControllerTest {
                 .build();
 
         version.getStatus().setImageRef("replace-me");
-        JsonObject existing = addCondition(build(version), new ConditionBuilder().withType("Provisioning").withStatus("True").build());
+        JsonObject existing = addCondition(build(version), new ConditionBuilder().withType("Provisioning").withStatus("True").build(), "http://test.com");
         version.getStatus().setImageRef(expectedImageRef);
 
         client.secrets().inNamespace(CONTROLLER_NS).create(dashboardSecret);
@@ -297,8 +297,8 @@ class KogitoServiceTest extends AbstractControllerTest {
         //Then
         assertThat(client.secrets().inNamespace(version.getMetadata().getNamespace()).withName(BAAAS_DASHBOARD_AUTH_SECRET).get(), notNullValue());
         KogitoRuntime runtime = client.customResources(KogitoRuntime.class)
-                .inNamespace(version.getMetadata().getNamespace())
-                .withName(decision.getMetadata().getName()).get();
+                .inNamespace(decision.getMetadata().getNamespace())
+                .withName(version.getMetadata().getName()).get();
         assertThat(runtime, nullValue());
         assertThat(version.getStatus().getKogitoServiceRef(), nullValue());
         verify(versionService, times(1)).setServiceStatus(version, Boolean.FALSE, "KogitoRuntimeRedeploy", "re-creating KogitoRuntime");
@@ -339,7 +339,9 @@ class KogitoServiceTest extends AbstractControllerTest {
                         .setKogitoServiceRef(decision.getMetadata().getName()))
                 .build();
 
-        JsonObject existing = addCondition(build(version), new ConditionBuilder().withType("Deployed").withStatus("True").build());
+        JsonObject existing = addCondition(build(version), new ConditionBuilder()
+                .withType("Deployed").withStatus("True")
+                .build(), "http://test.com");
 
         client.secrets().inNamespace(CONTROLLER_NS).create(dashboardSecret);
         client.customResources(Decision.class).inNamespace(CUSTOMER_NS).create(decision);
@@ -353,7 +355,7 @@ class KogitoServiceTest extends AbstractControllerTest {
         assertThat(client.secrets().inNamespace(version.getMetadata().getNamespace()).withName(BAAAS_DASHBOARD_AUTH_SECRET).get(), notNullValue());
         KogitoRuntime runtime = client.customResources(KogitoRuntime.class)
                 .inNamespace(version.getMetadata().getNamespace())
-                .withName(decision.getMetadata().getName()).get();
+                .withName(version.getMetadata().getName()).get();
         assertThat(runtime, notNullValue());
         assertThat(runtime.getMetadata().getLabels(), aMapWithSize(4));
         assertThat(runtime.getMetadata().getLabels(), hasEntry(BAAAS_RESOURCE_LABEL, BAAAS_RESOURCE_KOGITO_SERVICE));
@@ -371,7 +373,7 @@ class KogitoServiceTest extends AbstractControllerTest {
                         || assertSecretKeyEnv(e, BAAAS_DASHBOARD_AUTH_SECRET, BAAAS_DASHBOARD_CLIENTSECRET, CLIENTSECRET_KEY))
 
                 , is(true));
-        assertThat(version.getStatus().getKogitoServiceRef(), is(decision.getMetadata().getName()));
+        assertThat(version.getStatus().getKogitoServiceRef(), is(version.getMetadata().getName()));
         verify(versionService, times(1)).setReadyStatus(version);
         verify(versionService, times(1)).setServiceStatus(version, Boolean.TRUE, "Deployed", "");
     }
@@ -427,7 +429,7 @@ class KogitoServiceTest extends AbstractControllerTest {
         assertThat(client.secrets().inNamespace(version.getMetadata().getNamespace()).withName(expectedKafkaSecretName).get(), notNullValue());
         KogitoRuntime runtime = client.customResources(KogitoRuntime.class)
                 .inNamespace(version.getMetadata().getNamespace())
-                .withName(decision.getMetadata().getName()).get();
+                .withName(version.getMetadata().getName()).get();
         assertThat(runtime, notNullValue());
         assertThat(runtime.getMetadata().getLabels(), aMapWithSize(4));
         assertThat(runtime.getMetadata().getLabels(), hasEntry(BAAAS_RESOURCE_LABEL, BAAAS_RESOURCE_KOGITO_SERVICE));
@@ -450,7 +452,7 @@ class KogitoServiceTest extends AbstractControllerTest {
                         || assertKeyEnv(e, BAAAS_KAFKA_OUTGOING_TOPIC, decision.getSpec().getDefinition().getKafka().getOutputTopic()))
 
                 , is(true));
-        assertThat(version.getStatus().getKogitoServiceRef(), is(decision.getMetadata().getName()));
+        assertThat(version.getStatus().getKogitoServiceRef(), is(version.getMetadata().getName()));
         verify(versionService, times(1)).setServiceStatus(version, Boolean.FALSE, "Unknown", "");
     }
 
@@ -469,7 +471,7 @@ class KogitoServiceTest extends AbstractControllerTest {
                 && envVar.getValue().equals(envValue);
     }
 
-    private JsonObject addCondition(JsonObject object, Condition condition) {
+    private JsonObject addCondition(JsonObject object, Condition condition, String externalURI) {
         JsonArrayBuilder conditionsBuilder = Json.createArrayBuilder();
         conditionsBuilder.add(JsonResourceUtils.toJson(condition));
 
@@ -482,6 +484,7 @@ class KogitoServiceTest extends AbstractControllerTest {
 
         }
         statusBuilder.add("conditions", conditionsBuilder.build());
+        statusBuilder.add("externalURI", externalURI);
         JsonObjectBuilder builder = Json.createObjectBuilder();
         object.entrySet().stream().filter(e -> !e.getKey().equals("status")).forEach(e -> builder.add(e.getKey(), e.getValue()));
         return builder.add("status", statusBuilder.build()).build();

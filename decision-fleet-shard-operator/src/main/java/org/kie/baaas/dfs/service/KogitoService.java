@@ -15,6 +15,7 @@
 package org.kie.baaas.dfs.service;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Objects;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -52,6 +53,7 @@ import static org.kie.baaas.dfs.service.JsonResourceUtils.getConditionStatus;
 import static org.kie.baaas.dfs.service.JsonResourceUtils.getName;
 import static org.kie.baaas.dfs.service.JsonResourceUtils.getOwnerUid;
 import static org.kie.baaas.dfs.service.JsonResourceUtils.getSpec;
+import static org.kie.baaas.dfs.service.JsonResourceUtils.getStatus;
 import static org.kie.baaas.dfs.service.JsonResourceUtils.toJson;
 
 @ApplicationScoped
@@ -93,7 +95,7 @@ public class KogitoService {
     DecisionVersionService versionService;
 
     public static String getServiceName(DecisionVersion version) {
-        return version.getMetadata().getLabels().get(DECISION_LABEL);
+        return version.getMetadata().getName();
     }
 
     public static JsonObject build(DecisionVersion version) {
@@ -174,7 +176,7 @@ public class KogitoService {
         JsonObject current = null;
         try {
             current = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
-                    .get(version.getMetadata().getNamespace(), version.getMetadata().getLabels().get(DECISION_LABEL)))
+                    .get(version.getMetadata().getNamespace(), version.getMetadata().getName()))
                     .build();
         } catch (KubernetesClientException e) {
             LOGGER.debug("KogitoRuntime {} does not exist. Creating...", name);
@@ -209,12 +211,34 @@ public class KogitoService {
         boolean deployed = getConditionStatus(current, "Deployed");
         String reason = provisioning ? "Provisioning" : "Unknown";
         Boolean status = Boolean.FALSE;
+        String message = "";
         if (deployed) {
-            reason = "Deployed";
-            status = Boolean.TRUE;
-            versionService.setReadyStatus(version);
+            try {
+                JsonObject kogitoRuntime = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
+                        .get(version.getMetadata().getNamespace(), version.getStatus().getKogitoServiceRef())).build();
+                if (Objects.equals(version.getMetadata().getUid(), JsonResourceUtils.getOwnerUid(kogitoRuntime))) {
+                    if (getStatus(kogitoRuntime).containsKey("externalURI")) {
+                        version.getStatus().setEndpoint(URI.create(getStatus(kogitoRuntime).getString("externalURI")));
+                        reason = "Deployed";
+                        status = Boolean.TRUE;
+                        versionService.setReadyStatus(version);
+                        LOGGER.info("Endpoint set");
+                    } else {
+                        LOGGER.warn("No endpoint available for the decision {} version {}. The manager will be notified about the failure.",
+                                version.getMetadata().getName(), version.getSpec().getVersion());
+                        reason = REASON_FAILED;
+                        status = Boolean.FALSE;
+                        message = "Unable to retrieve endpointURI from KogitoRuntime";
+                    }
+                }
+
+            } catch (KubernetesClientException e) {
+                LOGGER.warn("Unable to retrieve KogitoRuntime {} for DecisionVersion {}",
+                        version.getStatus().getKogitoServiceRef(),
+                        version.getMetadata().getName(), e);
+            }
         }
-        versionService.setServiceStatus(version, status, reason, "");
+        versionService.setServiceStatus(version, status, reason, message);
     }
 
     private boolean needsUpdate(JsonObject expected, JsonObject current) {

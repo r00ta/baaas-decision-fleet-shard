@@ -220,7 +220,8 @@ class DecisionControllerTest extends AbstractControllerTest {
                 .withStatus(new DecisionVersionStatus()
                         .setReady(Boolean.TRUE)
                         .setImageRef("some-decision-image:latest")
-                        .setKogitoServiceRef(decision.getMetadata().getName()))
+                        .setKogitoServiceRef("some-decision-1")
+                        .setEndpoint(URI.create("http://test.com")))
                 .withSpec(decision.getSpec().getDefinition())
                 .build();
         client.namespaces().create(new NamespaceBuilder().withMetadata(new ObjectMetaBuilder().withName(CUSTOMER_NS).build()).build());
@@ -272,7 +273,8 @@ class DecisionControllerTest extends AbstractControllerTest {
                 .withStatus(new DecisionVersionStatus()
                         .setReady(Boolean.TRUE)
                         .setImageRef("some-decision-image:latest")
-                        .setKogitoServiceRef(decision.getMetadata().getName()))
+                        .setKogitoServiceRef("some-decision-1")
+                        .setEndpoint(URI.create("http://test.com")))
                 .withSpec(decision.getSpec().getDefinition())
                 .build();
         client.namespaces().create(new NamespaceBuilder().withMetadata(new ObjectMetaBuilder().withName(CUSTOMER_NS).build()).build());

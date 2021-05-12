@@ -15,6 +15,7 @@
 
 package org.kie.baaas.dfs.api;
 
+import java.net.URI;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -41,6 +42,7 @@ import lombok.experimental.Accessors;
         "pipelineRef",
         "imageRef",
         "kogitoServiceRef",
+        "versionEndpoint",
         "configRef",
         "conditions"
 })
@@ -69,6 +71,8 @@ public class DecisionVersionStatus {
     private String imageRef;
     @JsonProperty
     private String kogitoServiceRef;
+    @JsonProperty
+    private URI endpoint;
 
     @JsonIgnore
     private Map<String, Condition> conditions = new HashMap<>();

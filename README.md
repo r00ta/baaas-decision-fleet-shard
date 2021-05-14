@@ -70,20 +70,6 @@ There is a convenience set of scripts that helps you provision all the necessary
 
 Required files for running the script:
 
-### registry-auth.json
-
-File used to push resulting images to the destination image registry. Example:
-
-```json
-{
-  "auths": {
-    "quay.io": {
-      "auth": "<your-authentication-token>"
-    }
-  }
-}
-```
-
 ### user-credentials.sh
 
 Executable file that sets environment variables used to fetch the decision resources from AWS. Example:
@@ -124,7 +110,7 @@ clone the `baaas-infra` repository. Then it will create the following resources 
 * Create all the ConfigMaps used by the pipeline
 * Create the Pipeline and Task
 * Create the PVC to use as Maven Cache
-* Create secrets for AWS, Push token and registry pull
+* Create secrets for AWS and registry pull (if needed)
 * Patch the default service account to add the imagePullSecret
 
 ### Undeploy resources

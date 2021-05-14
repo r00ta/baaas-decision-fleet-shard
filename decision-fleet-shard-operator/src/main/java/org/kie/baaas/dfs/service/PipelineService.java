@@ -55,16 +55,16 @@ public class PipelineService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PipelineService.class);
 
-    private static final String PIPELINE_REF = "baaas-dfs-decision-build";
-    private static final String VAR_PROPS_CONFIGMAP = "BUILD_INPUT_APP_PROPS_CONFIGMAP";
-    private static final String VAR_POM_CONFIGMAP = "BUILD_INPUT_POM_XML_CONFIGMAP";
-    private static final String VAR_DMN_LOCATION = "BUILD_INPUT_DMN_LOCATION";
-    private static final String VAR_REGISTRY_LOCATION = "BUILD_OUTPUT_REGISTRY_PUSH_LOCATION";
+    public static final String PIPELINE_REF = "baaas-dfs-decision-build";
+    public static final String VAR_PROPS_CONFIGMAP = "BUILD_INPUT_APP_PROPS_CONFIGMAP";
+    public static final String VAR_POM_CONFIGMAP = "BUILD_INPUT_POM_XML_CONFIGMAP";
+    public static final String VAR_DMN_LOCATION = "BUILD_INPUT_DMN_LOCATION";
+    public static final String VAR_REGISTRY_LOCATION = "BUILD_OUTPUT_REGISTRY_PUSH_LOCATION";
     private static final String KAFKA_POM_XML_CONFIGMAP = "baaas-dfs-build-pom-kafka-xml";
     private static final String POM_XML_CONFIGMAP = "baaas-dfs-build-pom-xml";
     private static final String KAFKA_APP_PROPS_CONFIGMAP = "baaas-dfs-build-application-kafka-props";
     private static final String APP_PROPS_CONFIGMAP = "baaas-dfs-build-application-props";
-    private static final String IMAGE_REF_TEMPLATE = "quay.io/%s/baaas-decision-builds:%s-%s-%s";
+    private static final String IMAGE_REF_TEMPLATE = "image-registry.openshift-image-registry.svc:5000/%s/%s:%s";
 
     public static final CustomResourceDefinitionContext PIPELINE_RUN_CONTEXT = new CustomResourceDefinitionContext.Builder()
             .withGroup("tekton.dev")
@@ -84,64 +84,6 @@ public class PipelineService {
 
     @Inject
     KubernetesClient client;
-
-    public static String getPipelineRunName(DecisionVersion version) {
-        return version.getMetadata().getLabels().get(CUSTOMER_LABEL) + "-" + version.getMetadata().getName();
-    }
-
-    public static JsonObject build(String namespace, DecisionVersion version) {
-        return Json.createObjectBuilder()
-                .add("apiVersion", PIPELINE_RUN_CONTEXT.getGroup() + "/" + PIPELINE_RUN_CONTEXT.getVersion())
-                .add("kind", PIPELINE_RUN_CONTEXT.getKind())
-                .add("metadata", Json.createObjectBuilder()
-                        .add("name", getPipelineRunName(version))
-                        .add("namespace", namespace)
-                        .add("labels", Json.createObjectBuilder()
-                                .add(BAAAS_RESOURCE_LABEL, BAAAS_RESOURCE_PIPELINE_RUN)
-                                .add(DECISION_VERSION_LABEL, version.getMetadata().getName())
-                                .add(DECISION_LABEL, version.getMetadata().getLabels().get(DECISION_LABEL))
-                                .add(CUSTOMER_LABEL, version.getMetadata().getLabels().get(CUSTOMER_LABEL))
-                                .add(DECISION_NAMESPACE_LABEL, version.getMetadata().getNamespace())
-                                .add(OWNER_UID_LABEL, version.getMetadata().getUid())
-                                .add(MANAGED_BY_LABEL, OPERATOR_NAME)
-                                .build())
-                        .build())
-                .add("spec", Json.createObjectBuilder()
-                        .add("pipelineRef", Json.createObjectBuilder()
-                                .add("name", PIPELINE_REF)
-                                .build())
-                        .add("params", Json.createArrayBuilder()
-                                .add(buildEnvValue(VAR_POM_CONFIGMAP, getPomConfigMapName(version.getSpec())))
-                                .add(buildEnvValue(VAR_PROPS_CONFIGMAP, getPropsConfigMapName(version.getSpec())))
-                                .add(buildEnvValue(VAR_DMN_LOCATION, version.getSpec().getSource().toString()))
-                                .add(buildEnvValue(VAR_REGISTRY_LOCATION, buildImageRef(version)))
-                                .build())
-                        .build())
-                .build();
-    }
-
-    public static String getPomConfigMapName(DecisionVersionSpec spec) {
-        if (spec.getKafka() != null) {
-            return KAFKA_POM_XML_CONFIGMAP;
-        }
-        return POM_XML_CONFIGMAP;
-    }
-
-    public static String getPropsConfigMapName(DecisionVersionSpec spec) {
-        if (spec.getKafka() != null) {
-            return KAFKA_APP_PROPS_CONFIGMAP;
-        }
-        return APP_PROPS_CONFIGMAP;
-    }
-
-    public static String buildImageRef(DecisionVersion version) {
-        return String.format(IMAGE_REF_TEMPLATE,
-                //TODO: changeme
-                "ruben",
-                version.getMetadata().getNamespace(),
-                version.getMetadata().getLabels().get(DECISION_LABEL),
-                version.getSpec().getVersion());
-    }
 
     public void createOrUpdate(DecisionVersion version) {
         try {
@@ -174,7 +116,20 @@ public class PipelineService {
         }
     }
 
-    public void updateBuildStatus(DecisionVersion version, JsonObject pipelineRun) {
+    public void delete(DecisionVersion version) {
+        try {
+            if (!client.customResource(PIPELINE_RUN_CONTEXT).list(client.getNamespace(), Map.of(OWNER_UID_LABEL, version.getMetadata().getUid())).isEmpty()) {
+                LOGGER.debug("Cleaning up PipelineRun with name {} for DecisionVersion {}", getPipelineRunName(version), version.getMetadata().getName());
+                client.customResource(PIPELINE_RUN_CONTEXT).delete(client.getNamespace(), getPipelineRunName(version));
+            } else {
+                LOGGER.debug("Missing PipelineRun with name {} for DecisionVersion {}. Ignoring.", getPipelineRunName(version), version.getMetadata().getName());
+            }
+        } catch (IOException e) {
+            LOGGER.warn("Unable to clean up PipelineRun with name {} for DecisionVersion {}", getPipelineRunName(version), version.getMetadata().getName(), e);
+        }
+    }
+
+    private void updateBuildStatus(DecisionVersion version, JsonObject pipelineRun) {
         version.getStatus().setPipelineRef(getName(pipelineRun));
         JsonObject succeeded = getCondition(pipelineRun, PIPELINE_SUCCEEDED);
         if (succeeded == null) {
@@ -192,16 +147,60 @@ public class PipelineService {
         }
     }
 
-    public void delete(DecisionVersion version) {
-        try {
-            if (!client.customResource(PIPELINE_RUN_CONTEXT).list(client.getNamespace(), Map.of(OWNER_UID_LABEL, version.getMetadata().getUid())).isEmpty()) {
-                LOGGER.debug("Cleaning up PipelineRun with name {} for DecisionVersion {}", getPipelineRunName(version), version.getMetadata().getName());
-                client.customResource(PIPELINE_RUN_CONTEXT).delete(client.getNamespace(), getPipelineRunName(version));
-            } else {
-                LOGGER.debug("Missing PipelineRun with name {} for DecisionVersion {}. Ignoring.", getPipelineRunName(version), version.getMetadata().getName());
-            }
-        } catch (IOException e) {
-            LOGGER.warn("Unable to clean up PipelineRun with name {} for DecisionVersion {}", getPipelineRunName(version), version.getMetadata().getName(), e);
-        }
+    private static JsonObject build(String namespace, DecisionVersion version) {
+        return Json.createObjectBuilder()
+                .add("apiVersion", PIPELINE_RUN_CONTEXT.getGroup() + "/" + PIPELINE_RUN_CONTEXT.getVersion())
+                .add("kind", PIPELINE_RUN_CONTEXT.getKind())
+                .add("metadata", Json.createObjectBuilder()
+                        .add("name", getPipelineRunName(version))
+                        .add("namespace", namespace)
+                        .add("labels", Json.createObjectBuilder()
+                                .add(BAAAS_RESOURCE_LABEL, BAAAS_RESOURCE_PIPELINE_RUN)
+                                .add(DECISION_VERSION_LABEL, version.getMetadata().getName())
+                                .add(DECISION_LABEL, version.getMetadata().getLabels().get(DECISION_LABEL))
+                                .add(CUSTOMER_LABEL, version.getMetadata().getLabels().get(CUSTOMER_LABEL))
+                                .add(DECISION_NAMESPACE_LABEL, version.getMetadata().getNamespace())
+                                .add(OWNER_UID_LABEL, version.getMetadata().getUid())
+                                .add(MANAGED_BY_LABEL, OPERATOR_NAME)
+                                .build())
+                        .build())
+                .add("spec", Json.createObjectBuilder()
+                        .add("pipelineRef", Json.createObjectBuilder()
+                                .add("name", PIPELINE_REF)
+                                .build())
+                        .add("params", Json.createArrayBuilder()
+                                .add(buildEnvValue(VAR_POM_CONFIGMAP, getPomConfigMapName(version.getSpec())))
+                                .add(buildEnvValue(VAR_PROPS_CONFIGMAP, getPropsConfigMapName(version.getSpec())))
+                                .add(buildEnvValue(VAR_DMN_LOCATION, version.getSpec().getSource().toString()))
+                                .add(buildEnvValue(VAR_REGISTRY_LOCATION, buildImageRef(version)))
+                                .build())
+                        .build())
+                .build();
     }
+
+    private static String getPipelineRunName(DecisionVersion version) {
+        return version.getMetadata().getLabels().get(CUSTOMER_LABEL) + "-" + version.getMetadata().getName();
+    }
+
+    private static String getPomConfigMapName(DecisionVersionSpec spec) {
+        if (spec.getKafka() != null) {
+            return KAFKA_POM_XML_CONFIGMAP;
+        }
+        return POM_XML_CONFIGMAP;
+    }
+
+    private static String getPropsConfigMapName(DecisionVersionSpec spec) {
+        if (spec.getKafka() != null) {
+            return KAFKA_APP_PROPS_CONFIGMAP;
+        }
+        return APP_PROPS_CONFIGMAP;
+    }
+
+    private static String buildImageRef(DecisionVersion version) {
+        return String.format(IMAGE_REF_TEMPLATE,
+                version.getMetadata().getNamespace(),
+                version.getMetadata().getLabels().get(DECISION_LABEL),
+                version.getSpec().getVersion());
+    }
+
 }

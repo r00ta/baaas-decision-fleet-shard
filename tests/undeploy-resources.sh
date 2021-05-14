@@ -16,7 +16,7 @@ kubectl delete cm baaas-dfs-build-application-kafka-props baaas-dfs-build-applic
 
 kubectl delete pipeline,task baaas-dfs-decision-build || true
 
-kubectl delete secrets baaas-dfs-build-aws-credentials baaas-dfs-build-registry-push-token baaas-dfs-kafka-credentials || true
+kubectl delete secrets baaas-dfs-build-aws-credentials baaas-dfs-kafka-credentials || true
 
 
 

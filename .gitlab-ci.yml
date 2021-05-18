@@ -11,6 +11,9 @@ stages:
   - native-compile
   - build-and-push-container
 
+include:
+  - local: '.cd-allowlist.yml'
+
 .cache-definition: &cache-definition
   cache:
     key: ${CI_COMMIT_REF_SLUG}
@@ -27,8 +30,9 @@ build:
   tags:
     - baaas
   only:
-    - main@baaas/baaas-decision-fleet-shard
-    - merge_requests@baaas/baaas-decision-fleet-shard
+    refs:
+      - main@baaas/baaas-decision-fleet-shard
+      - merge_requests@baaas/baaas-decision-fleet-shard
 
 test:
   <<: *cache-definition
@@ -44,11 +48,13 @@ test:
   tags:
     - baaas
   only:
-    - main@baaas/baaas-decision-fleet-shard
-    - merge_requests@baaas/baaas-decision-fleet-shard
+    refs:
+      - main@baaas/baaas-decision-fleet-shard
+      - merge_requests@baaas/baaas-decision-fleet-shard
 
 deploy-jars:
   <<: *cache-definition
+  extends: .cd-allowlist
   image: quay.io/rblake/baaas-maven-kogito-s2i:6888c2304eeeb3b45740576325571ba8a1d2b4ed
   stage: deploy-jars
   script:
@@ -56,10 +62,12 @@ deploy-jars:
   tags:
     - baaas
   only:
-    - main@baaas/baaas-decision-fleet-shard
+    refs:
+      - main@baaas/baaas-decision-fleet-shard
 
 native-compile:
   <<: *cache-definition
+  extends: .cd-allowlist
   image: quay.io/kiegroup/kogito-quarkus-ubi8-s2i:1.0.0
   stage: native-compile
   script:
@@ -71,11 +79,13 @@ native-compile:
   tags:
     - baaas
   only:
-    - main@baaas/baaas-decision-fleet-shard
-    - merge_requests@baaas/baaas-decision-fleet-shard
+    refs:
+      - main@baaas/baaas-decision-fleet-shard
+      - merge_requests@baaas/baaas-decision-fleet-shard
 
 build-and-push-container-jvm:
   <<: *cache-definition
+  extends: .cd-allowlist
   image: docker:19.03.12
   stage: build-and-push-container
   before_script:
@@ -88,10 +98,12 @@ build-and-push-container-jvm:
   tags:
     - baaas
   only:
-    - main@baaas/baaas-decision-fleet-shard
+    refs:
+      - main@baaas/baaas-decision-fleet-shard
 
 build-and-push-container-native:
   image: docker:19.03.12
+  extends: .cd-allowlist
   stage: build-and-push-container
   before_script:
     - echo "$CONTAINER_REGISTRY_PASSWORD" | docker login quay.io --username $CONTAINER_REGISTRY_USER --password-stdin
@@ -103,4 +115,5 @@ build-and-push-container-native:
   tags:
     - baaas
   only:
-    - main@baaas/baaas-decision-fleet-shard
+    refs:
+      - main@baaas/baaas-decision-fleet-shard

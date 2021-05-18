@@ -1,0 +1,11 @@
+#
+# List of file pattern globs that will allow the full continuous delivery pipeline to trigger
+#
+.cd-allowlist:
+  only:
+    changes:
+      - api/src/main/**
+      - api/pom.xml
+      - decision-fleet-shard-operator/src/main/**
+      - decision-fleet-shard-operator/pom.xml
+      - pom.xml

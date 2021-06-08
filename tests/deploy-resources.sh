@@ -12,7 +12,7 @@ __target="${__root}/target"
 __gitremote="$(git remote get-url origin)"
 __infra_repo="${__gitremote/baaas-decision-fleet-shard/baaas-infra}"
 __infra_path="${__target}/baaas-infra"
-__pipeline_resources="${__infra_path}/base/dfs/resources/build-pipeline/"
+__pipeline_resources="${__infra_path}/base/baaas-dfs/resources/build-pipeline"
 __credentials="${__dir}/user-credentials.sh"
 __pull_secret="${__dir}/user-pull-secret.yaml"
 

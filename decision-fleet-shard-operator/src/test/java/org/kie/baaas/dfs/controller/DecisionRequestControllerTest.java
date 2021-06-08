@@ -120,6 +120,7 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
         DecisionVersion version = new DecisionVersionBuilder()
                 .withMetadata(new ObjectMetaBuilder()
                         .withName("some-decision-1")
+                        .withNamespace(CUSTOMER_NS)
                         .addToLabels(DECISION_LABEL, request.getSpec().getName())
                         .build())
                 .withSpec(request.getSpec().getDefinition())

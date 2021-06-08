@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.kie.baaas.dfs.controller;
 
 import java.util.List;
@@ -73,7 +72,7 @@ public class DecisionRequestController implements ResourceController<DecisionReq
     private static final String BAAAS_NS_TEMPLATE = "baaas-%s";
 
     @Inject
-    KubernetesClient kubernetesClient;
+    KubernetesClient client;
 
     @Inject
     RemoteResourceClient resourceClient;
@@ -135,7 +134,7 @@ public class DecisionRequestController implements ResourceController<DecisionReq
     }
 
     private void validateVersion(DecisionRequestSpec spec, String namespace) throws DecisionValidationException {
-        List<DecisionVersion> versions = kubernetesClient.customResources(DecisionVersion.class)
+        List<DecisionVersion> versions = client.customResources(DecisionVersion.class)
                 .inNamespace(namespace)
                 .withLabel(DECISION_LABEL, spec.getName())
                 .list()
@@ -155,9 +154,9 @@ public class DecisionRequestController implements ResourceController<DecisionReq
     }
 
     private Decision createOrUpdateDecision(DecisionRequest request, String namespace) {
-        Namespace targetNs = kubernetesClient.namespaces().withName(namespace).get();
+        Namespace targetNs = client.namespaces().withName(namespace).get();
         if (targetNs == null) {
-            kubernetesClient.namespaces()
+            client.namespaces()
                     .create(new NamespaceBuilder().withNewMetadata().withName(namespace).endMetadata().build());
         }
         Decision expected = new DecisionBuilder()
@@ -173,12 +172,12 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                         .withWebhooks(request.getSpec().getWebhooks())
                         .build())
                 .build();
-        Decision current = kubernetesClient.customResources(Decision.class)
+        Decision current = client.customResources(Decision.class)
                 .inNamespace(namespace)
                 .withName(request.getSpec().getName())
                 .get();
         if (current == null || !Objects.equals(expected.getSpec(), current.getSpec())) {
-            return kubernetesClient.customResources(Decision.class)
+            return client.customResources(Decision.class)
                     .inNamespace(namespace)
                     .withName(expected.getMetadata().getName())
                     .createOrReplace(expected);

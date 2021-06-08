@@ -28,6 +28,8 @@ import javax.json.JsonValue;
 
 import org.kie.baaas.dfs.api.Decision;
 import org.kie.baaas.dfs.api.DecisionVersion;
+import org.kie.baaas.dfs.model.NetworkResource;
+import org.kie.baaas.dfs.service.networking.NetworkingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +55,6 @@ import static org.kie.baaas.dfs.service.JsonResourceUtils.getConditionStatus;
 import static org.kie.baaas.dfs.service.JsonResourceUtils.getName;
 import static org.kie.baaas.dfs.service.JsonResourceUtils.getOwnerUid;
 import static org.kie.baaas.dfs.service.JsonResourceUtils.getSpec;
-import static org.kie.baaas.dfs.service.JsonResourceUtils.getStatus;
 import static org.kie.baaas.dfs.service.JsonResourceUtils.toJson;
 
 @ApplicationScoped
@@ -89,10 +90,13 @@ public class KogitoService {
             .build();
 
     @Inject
-    KubernetesClient client;
+    DecisionVersionService versionService;
 
     @Inject
-    DecisionVersionService versionService;
+    NetworkingService networkingService;
+
+    @Inject
+    KubernetesClient client;
 
     public static String getServiceName(DecisionVersion version) {
         return version.getMetadata().getName();
@@ -216,21 +220,17 @@ public class KogitoService {
                 JsonObject kogitoRuntime = Json.createObjectBuilder(client.customResource(KOGITO_RUNTIME_CONTEXT)
                         .get(version.getMetadata().getNamespace(), version.getStatus().getKogitoServiceRef())).build();
                 if (Objects.equals(version.getMetadata().getUid(), JsonResourceUtils.getOwnerUid(kogitoRuntime))) {
-                    if (getStatus(kogitoRuntime).containsKey("externalURI")) {
-                        version.getStatus().setEndpoint(URI.create(getStatus(kogitoRuntime).getString("externalURI")));
-                        reason = "Deployed";
-                        status = Boolean.TRUE;
-                        versionService.setReadyStatus(version);
-                        LOGGER.info("Endpoint set");
-                    } else {
-                        LOGGER.warn("No endpoint available for the decision {} version {}. The manager will be notified about the failure.",
-                                version.getMetadata().getName(), version.getSpec().getVersion());
-                        reason = REASON_FAILED;
-                        status = Boolean.FALSE;
-                        message = "Unable to retrieve endpointURI from KogitoRuntime";
+                    reason = "Deployed";
+                    status = Boolean.TRUE;
+                    versionService.setReadyStatus(version);
+                    NetworkResource networkResource = networkingService.getOrCreateVersionEndpoint(version, version.getOwnerReference());
+                    if (networkResource == null) {
+                        LOGGER.info("DecisionVersion {} is not ready because of its networking resource.", version.getMetadata().getName());
+                        return;
                     }
-                }
 
+                    version.getStatus().setEndpoint(URI.create(networkResource.getEndpoint()));
+                }
             } catch (KubernetesClientException e) {
                 LOGGER.warn("Unable to retrieve KogitoRuntime {} for DecisionVersion {}",
                         version.getStatus().getKogitoServiceRef(),

@@ -37,6 +37,7 @@ import org.kie.baaas.dfs.api.DecisionVersionSpec;
 import org.kie.baaas.dfs.api.DecisionVersionStatus;
 import org.kie.baaas.dfs.api.Phase;
 import org.kie.baaas.dfs.api.ResourceUtils;
+import org.kie.baaas.dfs.networking.NetworkingTestUtils;
 import org.kie.baaas.dfs.service.JsonResourceUtils;
 import org.kie.baaas.dfs.service.KogitoService;
 import org.mockito.Mockito;
@@ -67,6 +68,9 @@ class DecisionControllerTest extends AbstractControllerTest {
 
     @Inject
     DecisionController decisionController;
+
+    @Inject
+    NetworkingTestUtils networkingTestUtils;
 
     @Test
     void testCreateNewVersion() {
@@ -227,6 +231,7 @@ class DecisionControllerTest extends AbstractControllerTest {
         client.namespaces().create(new NamespaceBuilder().withMetadata(new ObjectMetaBuilder().withName(CUSTOMER_NS).build()).build());
         client.customResource(KOGITO_RUNTIME_CONTEXT).create(CUSTOMER_NS, getKogitoRuntime(previous));
         client.customResources(DecisionVersion.class).inNamespace(CUSTOMER_NS).create(previous);
+        networkingTestUtils.mockDecisionNetworkingResource("some-decision-current-endpoint", previous.getStatus().getKogitoServiceRef(), previous, decision.getOwnerReference());
 
         //When
         UpdateControl<Decision> updateControl = decisionController.createOrUpdateResource(decision, null);
@@ -280,6 +285,7 @@ class DecisionControllerTest extends AbstractControllerTest {
         client.namespaces().create(new NamespaceBuilder().withMetadata(new ObjectMetaBuilder().withName(CUSTOMER_NS).build()).build());
         client.customResource(KOGITO_RUNTIME_CONTEXT).create(CUSTOMER_NS, getKogitoRuntime(previous));
         client.customResources(DecisionVersion.class).inNamespace(CUSTOMER_NS).create(previous);
+        networkingTestUtils.mockDecisionNetworkingResource("some-decision-current-endpoint", previous.getStatus().getKogitoServiceRef(), previous, decision.getOwnerReference());
 
         //When
         UpdateControl<Decision> updateControl = decisionController.createOrUpdateResource(decision, null);

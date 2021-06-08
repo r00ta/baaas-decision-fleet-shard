@@ -201,6 +201,10 @@ public class JsonResourceUtils {
     }
 
     public static boolean isManagedByController(JsonObject object) {
-        return OPERATOR_NAME.equals(getLabel(object, MANAGED_BY_LABEL));
+        return isManagedByController(getLabel(object, MANAGED_BY_LABEL));
+    }
+
+    public static boolean isManagedByController(String managedByLabel) {
+        return OPERATOR_NAME.equals(managedByLabel);
     }
 }

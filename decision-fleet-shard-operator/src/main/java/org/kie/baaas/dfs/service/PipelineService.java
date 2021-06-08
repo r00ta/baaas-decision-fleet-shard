@@ -29,6 +29,7 @@ import javax.json.JsonValue;
 import org.kie.baaas.dfs.api.DecisionVersion;
 import org.kie.baaas.dfs.api.DecisionVersionSpec;
 import org.kie.baaas.dfs.api.ResourceUtils;
+import org.kie.baaas.dfs.service.networking.NetworkingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +65,7 @@ public class PipelineService {
     private static final String POM_XML_CONFIGMAP = "baaas-dfs-build-pom-xml";
     private static final String KAFKA_APP_PROPS_CONFIGMAP = "baaas-dfs-build-application-kafka-props";
     private static final String APP_PROPS_CONFIGMAP = "baaas-dfs-build-application-props";
-    private static final String IMAGE_REF_TEMPLATE = "image-registry.openshift-image-registry.svc:5000/%s/%s:%s";
+    private static final String IMAGE_REF_TEMPLATE = "%s/%s/%s:%s";
 
     public static final CustomResourceDefinitionContext PIPELINE_RUN_CONTEXT = new CustomResourceDefinitionContext.Builder()
             .withGroup("tekton.dev")
@@ -83,11 +84,14 @@ public class PipelineService {
     DecisionVersionService versionService;
 
     @Inject
+    NetworkingService networkingService;
+
+    @Inject
     KubernetesClient client;
 
     public void createOrUpdate(DecisionVersion version) {
         try {
-            JsonObject expected = PipelineService.build(client.getNamespace(), version);
+            JsonObject expected = build(client.getNamespace(), version);
             JsonObject pipelineRuns = Json.createObjectBuilder(client.customResource(PIPELINE_RUN_CONTEXT)
                     .list(client.getNamespace(), Map.of(
                             DECISION_VERSION_LABEL, version.getMetadata().getName(),
@@ -137,7 +141,7 @@ public class PipelineService {
         }
         String reason = succeeded.getString(PIPELINE_REASON);
         if (PIPELINE_SUCCEEDED.equals(reason)) {
-            versionService.setBuildCompleted(version, PipelineService.buildImageRef(version));
+            versionService.setBuildCompleted(version, buildImageRef(version));
         } else {
             versionService.setBuildStatus(
                     version,
@@ -147,7 +151,7 @@ public class PipelineService {
         }
     }
 
-    private static JsonObject build(String namespace, DecisionVersion version) {
+    private JsonObject build(String namespace, DecisionVersion version) {
         return Json.createObjectBuilder()
                 .add("apiVersion", PIPELINE_RUN_CONTEXT.getGroup() + "/" + PIPELINE_RUN_CONTEXT.getVersion())
                 .add("kind", PIPELINE_RUN_CONTEXT.getKind())
@@ -196,11 +200,11 @@ public class PipelineService {
         return APP_PROPS_CONFIGMAP;
     }
 
-    private static String buildImageRef(DecisionVersion version) {
+    private String buildImageRef(DecisionVersion version) {
         return String.format(IMAGE_REF_TEMPLATE,
+                networkingService.getLocalRegistryUrl(),
                 version.getMetadata().getNamespace(),
                 version.getMetadata().getLabels().get(DECISION_LABEL),
                 version.getSpec().getVersion());
     }
-
 }

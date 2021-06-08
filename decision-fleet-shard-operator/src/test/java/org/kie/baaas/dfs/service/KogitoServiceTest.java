@@ -38,6 +38,7 @@ import org.kie.baaas.dfs.api.Kafka;
 import org.kie.baaas.dfs.api.ResourceUtils;
 import org.kie.baaas.dfs.controller.AbstractControllerTest;
 import org.kie.baaas.dfs.model.KogitoRuntime;
+import org.kie.baaas.dfs.networking.NetworkingTestUtils;
 
 import io.fabric8.kubernetes.api.model.Condition;
 import io.fabric8.kubernetes.api.model.ConditionBuilder;
@@ -91,6 +92,9 @@ class KogitoServiceTest extends AbstractControllerTest {
 
     @Inject
     KogitoService service;
+
+    @Inject
+    NetworkingTestUtils networkingTestUtils;
 
     @InjectMock
     DecisionVersionService versionService;
@@ -347,6 +351,7 @@ class KogitoServiceTest extends AbstractControllerTest {
         client.customResources(Decision.class).inNamespace(CUSTOMER_NS).create(decision);
         client.customResources(DecisionVersion.class).inNamespace(CUSTOMER_NS).create(version);
         client.customResource(KOGITO_RUNTIME_CONTEXT).create(decision.getMetadata().getNamespace(), existing.toString());
+        networkingTestUtils.mockDecisionNetworkingResource("some-decision-1", CUSTOMER_NS, version, version.getOwnerReference());
 
         //When
         service.createOrUpdate(version);

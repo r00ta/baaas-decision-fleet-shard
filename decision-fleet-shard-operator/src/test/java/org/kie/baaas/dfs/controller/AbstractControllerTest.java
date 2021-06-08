@@ -24,10 +24,11 @@ import org.kie.baaas.dfs.api.DecisionVersion;
 import org.kie.baaas.dfs.client.RemoteResourceClient;
 import org.kie.baaas.dfs.model.KogitoRuntime;
 import org.kie.baaas.dfs.model.PipelineRun;
+import org.kie.baaas.dfs.networking.NetworkingTestUtils;
 import org.mockito.Mockito;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.server.mock.KubernetesServer;
+import io.fabric8.openshift.client.server.mock.OpenShiftServer;
 import io.quarkus.test.junit.mockito.InjectMock;
 
 import static org.kie.baaas.dfs.service.PipelineService.PIPELINE_RUN_CONTEXT;
@@ -42,7 +43,10 @@ public abstract class AbstractControllerTest {
     protected KubernetesClient client;
 
     @Inject
-    protected KubernetesServer server;
+    protected OpenShiftServer server;
+
+    @Inject
+    protected NetworkingTestUtils networkingTestUtils;
 
     @InjectMock
     protected RemoteResourceClient remoteResourceClient;
@@ -56,6 +60,11 @@ public abstract class AbstractControllerTest {
         client.customResources(KogitoRuntime.class).inNamespace(CUSTOMER_NS).delete();
         client.customResources(PipelineRun.class).inNamespace(CONTROLLER_NS).delete();
 
+        client.customResources(PipelineRun.class).inNamespace(CONTROLLER_NS).delete();
+
+        networkingTestUtils.cleanUp(CONTROLLER_NS);
+        networkingTestUtils.cleanUp(CUSTOMER_NS);
+
         client.namespaces().withName(CUSTOMER_NS).delete();
         if (!Json.createObjectBuilder(client.customResource(PIPELINE_RUN_CONTEXT).list(CONTROLLER_NS)).build().getJsonArray("items").isEmpty()) {
             client.customResource(PIPELINE_RUN_CONTEXT).delete(CONTROLLER_NS);
@@ -65,5 +74,4 @@ public abstract class AbstractControllerTest {
         client.secrets().inNamespace(CUSTOMER_NS).delete();
         Mockito.reset(remoteResourceClient);
     }
-
 }

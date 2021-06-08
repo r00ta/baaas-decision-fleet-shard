@@ -12,9 +12,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.kie.baaas.dfs.controller;
 
+import java.net.URI;
 import java.util.Objects;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -26,6 +26,8 @@ import org.kie.baaas.dfs.api.DecisionVersion;
 import org.kie.baaas.dfs.api.DecisionVersionBuilder;
 import org.kie.baaas.dfs.api.Phase;
 import org.kie.baaas.dfs.client.RemoteResourceClient;
+import org.kie.baaas.dfs.model.NetworkResource;
+import org.kie.baaas.dfs.service.networking.NetworkingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +40,7 @@ import io.javaoperatorsdk.operator.api.DeleteControl;
 import io.javaoperatorsdk.operator.api.ResourceController;
 import io.javaoperatorsdk.operator.api.UpdateControl;
 import io.javaoperatorsdk.operator.api.config.ControllerConfiguration;
+import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
 import io.javaoperatorsdk.operator.processing.event.EventSourceManager;
 
 import static io.fabric8.kubernetes.client.utils.KubernetesResourceUtil.getNamespace;
@@ -53,15 +56,22 @@ public class DecisionController implements ResourceController<Decision> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DecisionController.class);
 
+    private AbstractEventSource networkingEventSource;
+
     @Inject
     KubernetesClient client;
 
     @Inject
     RemoteResourceClient resourceClient;
 
+    @Inject
+    NetworkingService networkingService;
+
     @Override
     public void init(EventSourceManager eventSourceManager) {
         eventSourceManager.registerEventSource("decision-version-event-source", DecisionVersionEventSource.createAndRegisterWatch(client));
+        this.networkingEventSource = networkingService.createAndRegisterWatchNetworkingResource();
+        eventSourceManager.registerEventSource("current-endpoint-event-source", this.networkingEventSource);
     }
 
     public DeleteControl deleteResource(Decision decision, Context<Decision> context) {
@@ -69,6 +79,8 @@ public class DecisionController implements ResourceController<Decision> {
         String requestName = decision.getMetadata().getLabels().get(DECISION_REQUEST_LABEL);
         LOGGER.info("Deleting DecisionRequest: {} in namespace {}", requestName, client.getNamespace());
         client.customResources(DecisionRequest.class).inNamespace(client.getNamespace()).withName(requestName).delete();
+        LOGGER.info("Deleting networking resources for decision {}", decision.getMetadata().getName());
+        networkingService.deleteCurrentEndpoint(decision.getMetadata().getName(), decision.getMetadata().getNamespace());
         return DeleteControl.DEFAULT_DELETE;
     }
 
@@ -109,11 +121,21 @@ public class DecisionController implements ResourceController<Decision> {
         }
 
         if (Boolean.parseBoolean(version.getStatus().isReady()) && version.getStatus().getKogitoServiceRef() != null) {
-            // TODO: create or update the "current" route for the decision. See https://issues.redhat.com/browse/BAAAS-212
-            // createOrUpdate route with version.getStatus().getKogitoServiceRef());
-            // For the time being, let's return the version endpoint contained in the decisionVersion CRD.
             if (version.getStatus().getEndpoint() != null) {
-                decision.getStatus().setEndpoint(version.getStatus().getEndpoint());
+                NetworkResource networkResource = networkingService.getOrCreateCurrentEndpoint(decision.getMetadata().getName(), version, decision.getOwnerReference());
+                if (networkResource == null) {
+                    return UpdateControl.noUpdate();
+                }
+
+                if (!version.getStatus().getKogitoServiceRef().equals(networkResource.getKogitoServiceRef())) {
+                    LOGGER.info("Updating CURRENT endpoint for the decision {} with the new deployed version {}", decision.getMetadata().getName(), version.getMetadata().getName());
+                    networkingService.updateCurrentEndpoint(decision.getMetadata().getName(), version, decision.getOwnerReference());
+                    return UpdateControl.noUpdate();
+                }
+
+                LOGGER.info("Current endpoint for the decision {} is {}", decision.getMetadata().getName(), networkResource.getEndpoint());
+                decision.getStatus().setEndpoint(URI.create(networkResource.getEndpoint()));
+                decision.getStatus().setVersionId(version.getSpec().getVersion());
                 resourceClient.notify(decision, version.getMetadata().getName(), null, Phase.CURRENT);
             }
             return UpdateControl.updateStatusSubResource(decision);

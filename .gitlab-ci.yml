@@ -34,12 +34,30 @@ build:
       - main@baaas/baaas-decision-fleet-shard
       - merge_requests@baaas/baaas-decision-fleet-shard
 
-test:
+test-openshift:
   <<: *cache-definition
   image: quay.io/kiegroup/kogito-quarkus-ubi8-s2i:1.0.0
   stage: test
   script:
-    - "/usr/share/maven/bin/mvn test"
+    - "/usr/share/maven/bin/mvn test -Dbaaas.k8s.platform=openshift"
+  artifacts:
+    expire_in: 1 week
+    reports:
+      junit:
+        - api/target/surefire-reports/TEST-*.xml
+  tags:
+    - baaas
+  only:
+    refs:
+      - main@baaas/baaas-decision-fleet-shard
+      - merge_requests@baaas/baaas-decision-fleet-shard
+
+test-kubernetes:
+  <<: *cache-definition
+  image: quay.io/kiegroup/kogito-quarkus-ubi8-s2i:1.0.0
+  stage: test
+  script:
+    - "/usr/share/maven/bin/mvn test -Dbaaas.k8s.platform=k8s"
   artifacts:
     expire_in: 1 week
     reports:

@@ -40,7 +40,6 @@ import static org.kie.baaas.dfs.api.DecisionVersionStatus.CONDITION_SERVICE;
 import static org.kie.baaas.dfs.api.DecisionVersionStatus.REASON_FAILED;
 import static org.kie.baaas.dfs.api.DecisionVersionStatus.REASON_SUCCESS;
 import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_LABEL;
-import static org.kie.baaas.dfs.service.JsonResourceUtils.getStatus;
 
 @ApplicationScoped
 public class DecisionVersionService {
@@ -48,10 +47,10 @@ public class DecisionVersionService {
     private static final Logger LOGGER = LoggerFactory.getLogger(DecisionVersionService.class);
 
     @Inject
-    KubernetesClient kubernetesClient;
+    RemoteResourceClient resourceClient;
 
     @Inject
-    RemoteResourceClient resourceClient;
+    KubernetesClient client;
 
     public void setBuildCompleted(DecisionVersion version, String imageRef) {
         setBuildStatus(version, Boolean.TRUE, REASON_SUCCESS, "");
@@ -105,7 +104,7 @@ public class DecisionVersionService {
         if (version.getStatus().getCondition(CONDITION_READY) == null) {
             version.getStatus().setReady(Boolean.FALSE);
         }
-        DecisionVersion current = kubernetesClient.customResources(DecisionVersion.class)
+        DecisionVersion current = client.customResources(DecisionVersion.class)
                 .inNamespace(version.getMetadata().getNamespace())
                 .withName(version.getMetadata().getName())
                 .get();
@@ -116,7 +115,7 @@ public class DecisionVersionService {
         if (Objects.equals(currentStatus, version.getStatus())) {
             return UpdateControl.noUpdate();
         }
-        Decision decision = kubernetesClient.customResources(Decision.class)
+        Decision decision = client.customResources(Decision.class)
                 .inNamespace(version.getMetadata().getNamespace())
                 .withName(version.getMetadata().getLabels().get(DECISION_LABEL))
                 .get();

@@ -38,6 +38,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
 import static org.kie.baaas.dfs.controller.DecisionLabels.CUSTOMER_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_LABEL;
+import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_VERSION_LABEL;
 
 @QuarkusTest
 public class NetworkingServiceTest extends AbstractControllerTest {
@@ -118,6 +119,17 @@ public class NetworkingServiceTest extends AbstractControllerTest {
         boolean deleted = service.delete(DECISION_NAME, VERSION.getMetadata().getNamespace());
 
         //then
+        assertThat(deleted, is(true));
         assertThat(networkingTestUtils.getNetworkingResourceSize(VERSION.getMetadata().getNamespace()), is(0));
+    }
+
+    @Test
+    void testLabels() {
+        //when
+        service.createOrUpdate(DECISION_NAME, VERSION, VERSION.getOwnerReference());
+
+        //then
+        assertThat(networkingTestUtils.getLabel(DECISION_NAME, DECISION_LABEL, VERSION), is("some-decision"));
+        assertThat(networkingTestUtils.getLabel(DECISION_NAME, DECISION_VERSION_LABEL, VERSION), is(VERSION.getMetadata().getName()));
     }
 }

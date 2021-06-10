@@ -48,7 +48,7 @@ public class OpenshiftTestUtils implements NetworkingTestUtils {
 
     @Override
     public void populateNetworkingResource(String endpointName, String serviceRef, DecisionVersion decisionVersion) {
-        Route route = client.routes().inNamespace(decisionVersion.getMetadata().getNamespace()).withName(endpointName).get();
+        Route route = getRoute(endpointName, decisionVersion.getMetadata().getNamespace());
 
         RouteTargetReference routeTargetReference = new RouteTargetReferenceBuilder()
                 .withName(serviceRef)
@@ -83,10 +83,20 @@ public class OpenshiftTestUtils implements NetworkingTestUtils {
     }
 
     @Override
+    public String getLabel(String endpointName, String label, DecisionVersion decisionVersion) {
+        Route route = getRoute(endpointName, decisionVersion.getMetadata().getNamespace());
+        return route.getMetadata().getLabels().get(label);
+    }
+
+    @Override
     public void cleanUp(String namespace) {
         try {
             client.routes().inNamespace(namespace).delete();
         } catch (Exception ignored) {
         }
+    }
+
+    private Route getRoute(String name, String namespace) {
+        return client.routes().inNamespace(namespace).withName(name).get();
     }
 }

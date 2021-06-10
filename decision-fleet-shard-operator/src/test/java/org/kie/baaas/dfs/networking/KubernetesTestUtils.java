@@ -43,7 +43,7 @@ public class KubernetesTestUtils implements NetworkingTestUtils {
 
     @Override
     public void populateNetworkingResource(String endpointName, String serviceRef, DecisionVersion decisionVersion) {
-        Ingress i = client.network().v1().ingresses().inNamespace(decisionVersion.getMetadata().getNamespace()).withName(endpointName).get();
+        Ingress i = getIngress(endpointName, decisionVersion.getMetadata().getNamespace());
 
         IngressStatus ingressStatus = new IngressStatusBuilder()
                 .withLoadBalancer(new LoadBalancerStatusBuilder()
@@ -61,7 +61,17 @@ public class KubernetesTestUtils implements NetworkingTestUtils {
     }
 
     @Override
+    public String getLabel(String endpointName, String label, DecisionVersion decisionVersion) {
+        Ingress i = getIngress(endpointName, decisionVersion.getMetadata().getNamespace());
+        return i.getMetadata().getLabels().get(label);
+    }
+
+    @Override
     public void cleanUp(String namespace) {
         client.network().v1().ingresses().inNamespace(namespace).delete();
+    }
+
+    private Ingress getIngress(String name, String namespace) {
+        return client.network().v1().ingresses().inNamespace(namespace).withName(name).get();
     }
 }

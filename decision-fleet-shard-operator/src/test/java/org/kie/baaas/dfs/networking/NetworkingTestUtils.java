@@ -27,4 +27,6 @@ public interface NetworkingTestUtils {
     void populateNetworkingResource(String endpointName, String serviceRef, DecisionVersion decisionVersion);
 
     int getNetworkingResourceSize(String namespace);
+
+    String getLabel(String endpointName, String label, DecisionVersion decisionVersion);
 }

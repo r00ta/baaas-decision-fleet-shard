@@ -40,6 +40,8 @@ import io.fabric8.kubernetes.api.model.networking.v1.ServiceBackendPortBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
 
+import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_LABEL;
+import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_VERSION_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.OPERATOR_NAME;
 
@@ -47,6 +49,8 @@ public class KubernetesNetworkingService implements NetworkingService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NetworkingService.class);
     private static final String PATH_REGEX = "(/|$)(.*)";
+    private static final String NGINX_REWRITE_TARGET_ANNOTATION = "nginx.ingress.kubernetes.io/rewrite-target";
+    private static final String REWRITE_TARGET_PLACEHOLDER = "/$2";
 
     private final String kubernetesInternalRegistry;
 
@@ -92,21 +96,23 @@ public class KubernetesNetworkingService implements NetworkingService {
 
     @Override
     public void createOrUpdate(String endpointName, DecisionVersion decisionVersion, OwnerReference ownerReference) {
-        Ingress ingress = buildIngress(endpointName, decisionVersion.getStatus().getKogitoServiceRef(), ownerReference);
+        Ingress ingress = buildIngress(endpointName, decisionVersion, ownerReference);
         client.network().v1().ingresses().inNamespace(decisionVersion.getMetadata().getNamespace()).createOrReplace(ingress);
     }
 
-    public Ingress buildIngress(String endpointName, String kogitoServiceRef, OwnerReference ownerReference) {
+    private Ingress buildIngress(String endpointName, DecisionVersion decisionVersion, OwnerReference ownerReference) {
         ObjectMeta metadata = new ObjectMetaBuilder()
                 .withOwnerReferences(ownerReference)
                 .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
-                .addToAnnotations("nginx.ingress.kubernetes.io/rewrite-target", "/$2")
+                .addToLabels(DECISION_LABEL, decisionVersion.getMetadata().getLabels().get(DECISION_LABEL))
+                .addToLabels(DECISION_VERSION_LABEL, decisionVersion.getMetadata().getName())
+                .addToAnnotations(NGINX_REWRITE_TARGET_ANNOTATION, REWRITE_TARGET_PLACEHOLDER)
                 .withName(endpointName)
                 .build();
 
         IngressBackend ingressBackend = new IngressBackendBuilder()
                 .withService(new IngressServiceBackendBuilder()
-                        .withName(kogitoServiceRef)
+                        .withName(decisionVersion.getStatus().getKogitoServiceRef())
                         .withPort(new ServiceBackendPortBuilder().withNumber(80).build())
                         .build())
                 .build();

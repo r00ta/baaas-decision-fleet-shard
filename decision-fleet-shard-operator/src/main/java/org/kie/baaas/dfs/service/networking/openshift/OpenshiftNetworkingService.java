@@ -32,6 +32,8 @@ import io.fabric8.openshift.api.model.RouteTargetReferenceBuilder;
 import io.fabric8.openshift.client.OpenShiftClient;
 import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
 
+import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_LABEL;
+import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_VERSION_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.OPERATOR_NAME;
 
@@ -82,21 +84,23 @@ public class OpenshiftNetworkingService implements NetworkingService {
 
     @Override
     public void createOrUpdate(String endpointName, DecisionVersion decisionVersion, OwnerReference ownerReference) {
-        Route route = buildRoute(endpointName, decisionVersion.getStatus().getKogitoServiceRef(), ownerReference);
+        Route route = buildRoute(endpointName, decisionVersion, ownerReference);
         client.routes().inNamespace(decisionVersion.getMetadata().getNamespace()).createOrReplace(route);
     }
 
-    private Route buildRoute(String endpointName, String kogitoServiceRef, OwnerReference ownerReference) {
+    private Route buildRoute(String endpointName, DecisionVersion decisionVersion, OwnerReference ownerReference) {
         ObjectMeta metadata = new ObjectMetaBuilder()
                 .withOwnerReferences(ownerReference)
                 .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
+                .addToLabels(DECISION_LABEL, decisionVersion.getMetadata().getLabels().get(DECISION_LABEL))
+                .addToLabels(DECISION_VERSION_LABEL, decisionVersion.getMetadata().getName())
                 .withName(endpointName)
                 .build();
 
         RouteSpec routeSpec = new RouteSpecBuilder()
                 .withTo(new RouteTargetReferenceBuilder()
                         .withKind("Service")
-                        .withName(kogitoServiceRef)
+                        .withName(decisionVersion.getStatus().getKogitoServiceRef())
                         .build())
                 .build();
 

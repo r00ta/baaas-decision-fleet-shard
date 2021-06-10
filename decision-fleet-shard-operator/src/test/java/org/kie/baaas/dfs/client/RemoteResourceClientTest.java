@@ -40,6 +40,7 @@ import org.kie.baaas.dfs.api.DecisionStatus;
 import org.kie.baaas.dfs.api.DecisionVersion;
 import org.kie.baaas.dfs.api.DecisionVersionBuilder;
 import org.kie.baaas.dfs.api.DecisionVersionSpec;
+import org.kie.baaas.dfs.api.DecisionVersionStatus;
 import org.kie.baaas.dfs.api.Phase;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
@@ -139,6 +140,8 @@ class RemoteResourceClientTest {
                             .withRequestBody(matchingJsonPath("$.phase", containing(Phase.FAILED.name())))
                             .withRequestBody(matchingJsonPath("$.namespace", absent()))
                             .withRequestBody(matchingJsonPath("$.endpoint", absent()))
+                            .withRequestBody(matchingJsonPath("$.versionEndpoint", absent()))
+                            .withRequestBody(matchingJsonPath("$.currentEndpoint", absent()))
                             .withRequestBody(matchingJsonPath("$.version", absent()))
                             .withRequestBody(matchingJsonPath("$.version_resource", absent()))));
                     return Boolean.TRUE;
@@ -184,6 +187,8 @@ class RemoteResourceClientTest {
                             .withRequestBody(matchingJsonPath("$.phase", containing(Phase.FAILED.name())))
                             .withRequestBody(matchingJsonPath("$.namespace", absent()))
                             .withRequestBody(matchingJsonPath("$.endpoint", absent()))
+                            .withRequestBody(matchingJsonPath("$.currentEndpoint", absent()))
+                            .withRequestBody(matchingJsonPath("$.versionEndpoint", absent()))
                             .withRequestBody(matchingJsonPath("$.version", absent()))
                             .withRequestBody(matchingJsonPath("$.version_resource", absent()))));
                     return Boolean.TRUE;
@@ -221,7 +226,18 @@ class RemoteResourceClientTest {
                         .setEndpoint(URI.create("http://mydecision.example.com"))
                         .setVersionId("1"))
                 .build();
-        client.notify(decision, "mydecision-1", "some message", Phase.CURRENT);
+
+        DecisionVersion version = new DecisionVersionBuilder()
+                .withMetadata(new ObjectMetaBuilder()
+                        .withName("mydecision-1")
+                        .withNamespace("baaas-thecustomer")
+                        .addToLabels(CUSTOMER_LABEL, "thecustomer")
+                        .addToLabels(DECISION_LABEL, "mydecision")
+                        .build())
+                .withStatus(new DecisionVersionStatus().setEndpoint(URI.create("http://mydecision-1.example.com")))
+                .withSpec(new DecisionVersionSpec().setVersion("1").setSource(URI.create("some-source")))
+                .build();
+        client.notify(decision, version, "some message", Phase.CURRENT);
         CompletableFuture<Boolean> verification = CompletableFuture.supplyAsync(() -> {
             while (true) {
                 try {
@@ -232,7 +248,9 @@ class RemoteResourceClientTest {
                             .withRequestBody(matchingJsonPath("$.customer", containing(decision.getMetadata().getLabels().get(CUSTOMER_LABEL))))
                             .withRequestBody(matchingJsonPath("$.phase", containing(Phase.CURRENT.name())))
                             .withRequestBody(matchingJsonPath("$.namespace", containing(decision.getMetadata().getNamespace())))
-                            .withRequestBody(matchingJsonPath("$.endpoint", containing(decision.getStatus().getEndpoint().toString())))
+                            .withRequestBody(matchingJsonPath("$.endpoint", containing(version.getStatus().getEndpoint().toString())))
+                            .withRequestBody(matchingJsonPath("$.currentEndpoint", containing(decision.getStatus().getEndpoint().toString())))
+                            .withRequestBody(matchingJsonPath("$.versionEndpoint", containing(version.getStatus().getEndpoint().toString())))
                             .withRequestBody(matchingJsonPath("$.version", containing(decision.getSpec().getDefinition().getVersion())))
                             .withRequestBody(matchingJsonPath("$.version_resource", containing("mydecision-1")))));
                     return Boolean.TRUE;
@@ -280,6 +298,8 @@ class RemoteResourceClientTest {
                             .withRequestBody(matchingJsonPath("$.phase", containing(Phase.FAILED.name())))
                             .withRequestBody(matchingJsonPath("$.namespace", containing(version.getMetadata().getNamespace())))
                             .withRequestBody(matchingJsonPath("$.endpoint", absent()))
+                            .withRequestBody(matchingJsonPath("$.currentEndpoint", absent()))
+                            .withRequestBody(matchingJsonPath("$.versionEndpoint", absent()))
                             .withRequestBody(matchingJsonPath("$.version", containing(version.getSpec().getVersion())))
                             .withRequestBody(matchingJsonPath("$.version_resource", containing(version.getMetadata().getName())))));
                     return Boolean.TRUE;

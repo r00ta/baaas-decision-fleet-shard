@@ -58,7 +58,7 @@ public class RemoteResourceClient {
         });
     }
 
-    public void notify(Decision decision, String versionResource, String message, Phase phase) {
+    public void notify(Decision decision, DecisionVersion version, String message, Phase phase) {
         CompletableFuture.runAsync(() -> {
             Webhook webhook = new WebhookBuilder().withCustomer(decision.getMetadata().getLabels().get(CUSTOMER_LABEL))
                     .withDecision(decision.getMetadata().getName())
@@ -66,9 +66,11 @@ public class RemoteResourceClient {
                     .withMessage(message)
                     .withNamespace(decision.getMetadata().getNamespace())
                     .withPhase(phase)
-                    .withVersionResource(versionResource)
+                    .withVersionResource(version.getMetadata().getName())
                     .withVersion(decision.getStatus().getVersionId())
-                    .withEndpoint(decision.getStatus().getEndpoint())
+                    .withEndpoint(version.getStatus().getEndpoint())
+                    .withCurrentEndpoint(decision.getStatus().getEndpoint())
+                    .withVersionEndpoint(version.getStatus().getEndpoint())
                     .build();
             notify(webhook, decision.getSpec().getWebhooks());
         });
@@ -82,6 +84,7 @@ public class RemoteResourceClient {
                     .withMessage(message)
                     .withVersion(version.getSpec().getVersion())
                     .withEndpoint(version.getStatus().getEndpoint())
+                    .withVersionEndpoint(version.getStatus().getEndpoint())
                     .withNamespace(version.getMetadata().getNamespace())
                     .withVersionResource(version.getMetadata().getName())
                     .withPhase(phase)

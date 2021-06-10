@@ -57,7 +57,10 @@ public class Webhook {
     private String decision;
     private String version;
     private Phase phase;
-    private URI endpoint;
+    @Deprecated
+    private URI endpoint; // TODO: remove
+    private URI versionEndpoint;
+    private URI currentEndpoint;
     private String message;
     private String at;
     private String namespace;

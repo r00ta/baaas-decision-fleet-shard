@@ -136,7 +136,7 @@ public class DecisionController implements ResourceController<Decision> {
                 LOGGER.info("Current endpoint for the decision {} is {}", decision.getMetadata().getName(), networkResource.getEndpoint());
                 decision.getStatus().setEndpoint(URI.create(networkResource.getEndpoint()));
                 decision.getStatus().setVersionId(version.getSpec().getVersion());
-                resourceClient.notify(decision, version.getMetadata().getName(), null, Phase.CURRENT);
+                resourceClient.notify(decision, version, null, Phase.CURRENT);
             }
             return UpdateControl.updateStatusSubResource(decision);
         }

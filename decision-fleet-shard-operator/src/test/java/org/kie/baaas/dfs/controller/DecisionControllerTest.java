@@ -40,6 +40,7 @@ import org.kie.baaas.dfs.api.ResourceUtils;
 import org.kie.baaas.dfs.networking.NetworkingTestUtils;
 import org.kie.baaas.dfs.service.JsonResourceUtils;
 import org.kie.baaas.dfs.service.KogitoService;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import io.fabric8.kubernetes.api.model.Condition;
@@ -62,6 +63,9 @@ import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_REQUEST_LABEL
 import static org.kie.baaas.dfs.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.OPERATOR_NAME;
 import static org.kie.baaas.dfs.service.KogitoService.KOGITO_RUNTIME_CONTEXT;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 
 @QuarkusTest
 class DecisionControllerTest extends AbstractControllerTest {
@@ -246,7 +250,9 @@ class DecisionControllerTest extends AbstractControllerTest {
         assertThat(version.getMetadata().getOwnerReferences().get(0).getName(), is(decision.getMetadata().getName()));
         assertThat(version.getSpec(), is(decision.getSpec().getDefinition()));
         assertThat(version.getStatus().isReady(), is("True"));
-        Mockito.verify(remoteResourceClient, Mockito.times(1)).notify(decision, version.getMetadata().getName(), null, Phase.CURRENT);
+        ArgumentCaptor<DecisionVersion> argument = ArgumentCaptor.forClass(DecisionVersion.class);
+        Mockito.verify(remoteResourceClient, Mockito.times(1))
+                .notify(eq(decision), argThat((DecisionVersion arg) -> arg.getMetadata().getName().equals(version.getMetadata().getName())), isNull(), eq(Phase.CURRENT));
     }
 
     @Test
@@ -300,7 +306,8 @@ class DecisionControllerTest extends AbstractControllerTest {
         assertThat(version.getMetadata().getOwnerReferences().get(0).getName(), is(decision.getMetadata().getName()));
         assertThat(version.getSpec(), is(decision.getSpec().getDefinition()));
         assertThat(version.getStatus().isReady(), is("True"));
-        Mockito.verify(remoteResourceClient, Mockito.times(1)).notify(decision, version.getMetadata().getName(), null, Phase.CURRENT);
+        Mockito.verify(remoteResourceClient, Mockito.times(1))
+                .notify(eq(decision), argThat((DecisionVersion arg) -> arg.getMetadata().getName().equals(version.getMetadata().getName())), isNull(), eq(Phase.CURRENT));
     }
 
     @Test

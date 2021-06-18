@@ -17,7 +17,6 @@ package org.kie.baaas.dfs.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import io.dekorate.crd.annotation.PrinterColumn;
@@ -31,12 +30,6 @@ import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({
-        "versionRef",
-        "state",
-        "reason",
-        "message"
-})
 @JsonDeserialize
 @Buildable(editableEnabled = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder", refs = {
         @BuildableReference(DecisionVersionRef.class)

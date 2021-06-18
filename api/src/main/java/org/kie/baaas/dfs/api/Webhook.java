@@ -19,7 +19,6 @@ import java.net.URI;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import io.quarkus.runtime.annotations.RegisterForReflection;
@@ -32,17 +31,6 @@ import lombok.ToString;
 import lombok.experimental.Accessors;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@JsonPropertyOrder({
-        "customer",
-        "decision",
-        "version",
-        "phase",
-        "endpoint",
-        "message",
-        "at",
-        "namespace",
-        "version_resource"
-})
 @JsonDeserialize
 @RegisterForReflection
 @Buildable(editableEnabled = false, lazyCollectionInitEnabled = false, builderPackage = "io.fabric8.kubernetes.api.builder")
@@ -57,8 +45,6 @@ public class Webhook {
     private String decision;
     private String version;
     private Phase phase;
-    @Deprecated
-    private URI endpoint; // TODO: remove
     private URI versionEndpoint;
     private URI currentEndpoint;
     private String message;

@@ -68,7 +68,6 @@ public class RemoteResourceClient {
                     .withPhase(phase)
                     .withVersionResource(version.getMetadata().getName())
                     .withVersion(decision.getStatus().getVersionId())
-                    .withEndpoint(version.getStatus().getEndpoint())
                     .withCurrentEndpoint(decision.getStatus().getEndpoint())
                     .withVersionEndpoint(version.getStatus().getEndpoint())
                     .build();
@@ -83,7 +82,6 @@ public class RemoteResourceClient {
                     .withAt(ResourceUtils.now())
                     .withMessage(message)
                     .withVersion(version.getSpec().getVersion())
-                    .withEndpoint(version.getStatus().getEndpoint())
                     .withVersionEndpoint(version.getStatus().getEndpoint())
                     .withNamespace(version.getMetadata().getNamespace())
                     .withVersionResource(version.getMetadata().getName())

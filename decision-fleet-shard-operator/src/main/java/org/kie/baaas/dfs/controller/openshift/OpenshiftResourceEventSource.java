@@ -28,7 +28,7 @@ import io.fabric8.openshift.client.OpenShiftClient;
 import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
 
 import static org.kie.baaas.dfs.controller.DecisionLabels.MANAGED_BY_LABEL;
-import static org.kie.baaas.dfs.service.JsonResourceUtils.isManagedByController;
+import static org.kie.baaas.dfs.controller.DecisionLabels.OPERATOR_NAME;
 
 public class OpenshiftResourceEventSource extends AbstractEventSource implements Watcher<Route> {
 
@@ -47,7 +47,7 @@ public class OpenshiftResourceEventSource extends AbstractEventSource implements
     }
 
     private void registerWatch() {
-        client.routes().inAnyNamespace().watch(this);
+        client.routes().inAnyNamespace().withLabel(MANAGED_BY_LABEL, OPERATOR_NAME).watch(this);
     }
 
     @Override
@@ -70,11 +70,6 @@ public class OpenshiftResourceEventSource extends AbstractEventSource implements
                     "Route",
                     route.getMetadata().getUid(),
                     route.getMetadata().getResourceVersion());
-            return;
-        }
-
-        if (!isManagedByController(route.getMetadata().getLabels().getOrDefault(MANAGED_BY_LABEL, null))) {
-            LOGGER.info("Ignoring event for not owned resource route uid: {}", route.getMetadata().getUid());
             return;
         }
 

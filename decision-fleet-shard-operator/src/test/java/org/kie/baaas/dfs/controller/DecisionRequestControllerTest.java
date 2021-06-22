@@ -28,17 +28,21 @@ import org.kie.baaas.dfs.api.DecisionConstants;
 import org.kie.baaas.dfs.api.DecisionRequest;
 import org.kie.baaas.dfs.api.DecisionRequestBuilder;
 import org.kie.baaas.dfs.api.DecisionRequestSpec;
+import org.kie.baaas.dfs.api.DecisionRequestSpecBuilder;
 import org.kie.baaas.dfs.api.DecisionSpec;
 import org.kie.baaas.dfs.api.DecisionVersion;
 import org.kie.baaas.dfs.api.DecisionVersionBuilder;
 import org.kie.baaas.dfs.api.DecisionVersionSpec;
 import org.kie.baaas.dfs.api.DecisionVersionStatus;
+import org.kie.baaas.dfs.api.KafkaCredential;
+import org.kie.baaas.dfs.api.KafkaRequest;
 import org.kie.baaas.dfs.api.Phase;
 import org.mockito.Mockito;
 
 import io.fabric8.kubernetes.api.model.ConditionBuilder;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.javaoperatorsdk.operator.api.UpdateControl;
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -50,6 +54,8 @@ import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.kie.baaas.dfs.api.DecisionConstants.CLIENTID_KEY;
+import static org.kie.baaas.dfs.api.DecisionConstants.CLIENTSECRET_KEY;
 import static org.kie.baaas.dfs.api.DecisionVersionStatus.CONDITION_BUILD;
 import static org.kie.baaas.dfs.api.DecisionVersionStatus.REASON_FAILED;
 import static org.kie.baaas.dfs.controller.DecisionLabels.CUSTOMER_LABEL;
@@ -57,6 +63,7 @@ import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_REQUEST_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.OPERATOR_NAME;
+import static org.kie.baaas.dfs.controller.DecisionRequestController.toDefinition;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 @QuarkusTest
@@ -76,9 +83,9 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
                 .withSpec(new DecisionRequestSpec()
                         .setName("some-decision")
                         .setWebhooks(List.of(URI.create("somewebhook")))
-                        .setDefinition(new DecisionVersionSpec()
-                                .setSource(URI.create("somesource"))
-                                .setVersion("1")))
+
+                        .setSource(URI.create("somesource"))
+                        .setVersion("1"))
                 .build();
         assertThat(client.namespaces().withName(CUSTOMER_NS).get(), nullValue());
 
@@ -112,9 +119,8 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
                         .setCustomerId(CUSTOMER)
                         .setName("some-decision")
                         .setWebhooks(List.of(URI.create("somewebhook")))
-                        .setDefinition(new DecisionVersionSpec()
-                                .setSource(URI.create("somesource"))
-                                .setVersion("1")))
+                        .setSource(URI.create("somesource"))
+                        .setVersion("1"))
                 .build();
         assertThat(client.namespaces().withName(CUSTOMER_NS).get(), nullValue());
         DecisionVersion version = new DecisionVersionBuilder()
@@ -123,7 +129,7 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
                         .withNamespace(CUSTOMER_NS)
                         .addToLabels(DECISION_LABEL, request.getSpec().getName())
                         .build())
-                .withSpec(request.getSpec().getDefinition())
+                .withSpec(toDefinition(request.getSpec()))
                 .withStatus(new DecisionVersionStatus()
                         .setCondition(CONDITION_BUILD, new ConditionBuilder()
                                 .withType(CONDITION_BUILD)
@@ -159,9 +165,8 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
                         .setCustomerId(CUSTOMER)
                         .setName("some-decision")
                         .setWebhooks(List.of(URI.create("somewebhook")))
-                        .setDefinition(new DecisionVersionSpec()
-                                .setSource(URI.create("somesource"))
-                                .setVersion("1")))
+                        .setSource(URI.create("somesource"))
+                        .setVersion("1"))
                 .build();
         assertThat(client.namespaces().withName(CUSTOMER_NS).get(), nullValue());
         DecisionVersion version = new DecisionVersionBuilder()
@@ -201,9 +206,8 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
                         .setCustomerId("Traffic-Violation")
                         .setName("some-decision")
                         .setWebhooks(List.of(URI.create("somewebhook")))
-                        .setDefinition(new DecisionVersionSpec()
-                                .setSource(URI.create("somesource"))
-                                .setVersion("1")))
+                        .setSource(URI.create("somesource"))
+                        .setVersion("1"))
                 .build();
         assertThat(client.namespaces().withName(CUSTOMER_NS).get(), nullValue());
 
@@ -237,9 +241,8 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
                         .setCustomerId(CUSTOMER)
                         .setName("some-decision")
                         .setWebhooks(List.of(URI.create("somewebhook")))
-                        .setDefinition(new DecisionVersionSpec()
-                                .setSource(URI.create("somesource"))
-                                .setVersion("1")))
+                        .setSource(URI.create("somesource"))
+                        .setVersion("1"))
                 .build();
         assertThat(client.namespaces().withName(CUSTOMER_NS).get(), nullValue());
 
@@ -256,7 +259,7 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
         assertThat(updatedRequest.getStatus().getReason(), nullValue());
         assertThat(updatedRequest.getStatus().getVersionRef().getName(), is(request.getSpec().getName()));
         assertThat(updatedRequest.getStatus().getVersionRef().getNamespace(), is(CUSTOMER_NS));
-        assertThat(updatedRequest.getStatus().getVersionRef().getVersion(), is(request.getSpec().getDefinition().getVersion()));
+        assertThat(updatedRequest.getStatus().getVersionRef().getVersion(), is(request.getSpec().getVersion()));
         Decision decision = client.customResources(Decision.class).inNamespace(CUSTOMER_NS).withName("some-decision").get();
         assertThat(decision.getMetadata().getName(), is("some-decision"));
         Map<String, String> expectedLabels = Map.of(
@@ -265,8 +268,44 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
                 DECISION_REQUEST_LABEL, request.getMetadata().getName());
         expectedLabels.forEach((key, value) -> assertThat(decision.getMetadata().getLabels(), hasEntry(key, value)));
         assertThat(decision.getMetadata().getOwnerReferences(), empty());
-        assertThat(decision.getSpec().getDefinition(), is(request.getSpec().getDefinition()));
+        assertThat(decision.getSpec().getDefinition(), is(toDefinition(request.getSpec())));
         assertThat(decision.getSpec().getWebhooks(), is(request.getSpec().getWebhooks()));
+    }
+
+    @Test
+    void testCreateRequestWithKafka() {
+        //Given
+        DecisionRequest request = new DecisionRequestBuilder()
+                .withMetadata(new ObjectMetaBuilder()
+                        .withName("some-request")
+                        .withNamespace("controller-namespace")
+                        .build())
+                .withSpec(new DecisionRequestSpecBuilder()
+                        .withCustomerId(CUSTOMER)
+                        .withName("example-decision")
+                        .withSource(URI.create("thesource.com"))
+                        .withKafka(new KafkaRequest()
+                                .setBootstrapServers("the-server:9002")
+                                .setInputTopic("someInput")
+                                .setOutputTopic("someOutput")
+                                .setCredential(new KafkaCredential()
+                                        .setClientId("svc-example-001")
+                                        .setClientSecret("abc-1234")))
+                        .build())
+                .build();
+
+        //When
+        UpdateControl<DecisionRequest> updateControl = decisionRequestController.createOrUpdateResource(request, null);
+
+        //Then
+        assertThat(updateControl.isUpdateStatusSubResource(), is(true));
+
+        assertThat(client.namespaces().withName(CUSTOMER_NS).get(), notNullValue());
+        Secret kafkaSecret = client.secrets().inNamespace(CUSTOMER_NS).withName(CUSTOMER + "-kafka-auth").get();
+        assertThat(kafkaSecret, notNullValue());
+        assertThat(kafkaSecret.getMetadata().getLabels().get(CUSTOMER_LABEL), is(CUSTOMER));
+        assertThat(kafkaSecret.getStringData().get(CLIENTID_KEY), is(request.getSpec().getKafka().getCredential().getClientId()));
+        assertThat(kafkaSecret.getStringData().get(CLIENTSECRET_KEY), is(request.getSpec().getKafka().getCredential().getClientSecret()));
     }
 
     @Test
@@ -281,9 +320,8 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
                         .setCustomerId(CUSTOMER)
                         .setName("some-decision")
                         .setWebhooks(List.of(URI.create("somewebhook")))
-                        .setDefinition(new DecisionVersionSpec()
-                                .setSource(URI.create("somesource"))
-                                .setVersion("1")))
+                        .setSource(URI.create("somesource"))
+                        .setVersion("1"))
                 .build();
         assertThat(client.namespaces().withName(CUSTOMER_NS).get(), nullValue());
         Decision decision = new DecisionBuilder()
@@ -292,7 +330,7 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
                         .withNamespace(CUSTOMER_NS)
                         .build())
                 .withSpec(new DecisionSpec()
-                        .setDefinition(request.getSpec().getDefinition())
+                        .setDefinition(toDefinition(request.getSpec()))
                         .setWebhooks(request.getSpec().getWebhooks()))
                 .build();
         client.namespaces().create(new NamespaceBuilder().withMetadata(new ObjectMetaBuilder().withName(CUSTOMER_NS).build()).build());
@@ -314,11 +352,11 @@ class DecisionRequestControllerTest extends AbstractControllerTest {
         assertThat(updatedRequest.getStatus().getReason(), nullValue());
         assertThat(updatedRequest.getStatus().getVersionRef().getName(), is(request.getSpec().getName()));
         assertThat(updatedRequest.getStatus().getVersionRef().getNamespace(), is(CUSTOMER_NS));
-        assertThat(updatedRequest.getStatus().getVersionRef().getVersion(), is(request.getSpec().getDefinition().getVersion()));
+        assertThat(updatedRequest.getStatus().getVersionRef().getVersion(), is(request.getSpec().getVersion()));
         Decision current = client.customResources(Decision.class).inNamespace(CUSTOMER_NS).withName("some-decision").get();
         assertThat(current.getMetadata().getName(), is("some-decision"));
         assertThat(current.getMetadata().getOwnerReferences(), empty());
-        assertThat(current.getSpec().getDefinition(), is(request.getSpec().getDefinition()));
+        assertThat(current.getSpec().getDefinition(), is(toDefinition(request.getSpec())));
         assertThat(current.getSpec().getWebhooks(), is(request.getSpec().getWebhooks()));
     }
 }

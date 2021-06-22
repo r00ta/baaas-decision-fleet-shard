@@ -23,5 +23,7 @@ public interface DecisionConstants {
     String VERSION_BUILD_FAILED = "VersionBuildFailed";
     String DUPLICATED_VERSION = "DuplicatedVersion";
     String SERVER_ERROR = "ServerError";
+    String CLIENTID_KEY = "clientid";
+    String CLIENTSECRET_KEY = "clientsecret";
 
 }

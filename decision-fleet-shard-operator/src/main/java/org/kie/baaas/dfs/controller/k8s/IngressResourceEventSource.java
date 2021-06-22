@@ -28,7 +28,7 @@ import io.fabric8.kubernetes.client.WatcherException;
 import io.javaoperatorsdk.operator.processing.event.AbstractEventSource;
 
 import static org.kie.baaas.dfs.controller.DecisionLabels.MANAGED_BY_LABEL;
-import static org.kie.baaas.dfs.service.JsonResourceUtils.isManagedByController;
+import static org.kie.baaas.dfs.controller.DecisionLabels.OPERATOR_NAME;
 
 public class IngressResourceEventSource extends AbstractEventSource implements Watcher<Ingress> {
 
@@ -47,7 +47,7 @@ public class IngressResourceEventSource extends AbstractEventSource implements W
     }
 
     private void registerWatch() {
-        client.network().v1().ingresses().inAnyNamespace().watch(this);
+        client.network().v1().ingresses().inAnyNamespace().withLabel(MANAGED_BY_LABEL, OPERATOR_NAME).watch(this);
     }
 
     @Override
@@ -70,11 +70,6 @@ public class IngressResourceEventSource extends AbstractEventSource implements W
                     "Ingress",
                     ingress.getMetadata().getUid(),
                     ingress.getMetadata().getResourceVersion());
-            return;
-        }
-
-        if (!isManagedByController(ingress.getMetadata().getLabels().getOrDefault(MANAGED_BY_LABEL, null))) {
-            LOGGER.info("Ignoring event for not owned resource {} uid: {}", "Ingress", ingress.getMetadata().getUid());
             return;
         }
 

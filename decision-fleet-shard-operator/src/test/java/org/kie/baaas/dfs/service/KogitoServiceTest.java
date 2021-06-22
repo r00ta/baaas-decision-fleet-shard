@@ -59,6 +59,8 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.kie.baaas.dfs.api.DecisionConstants.CLIENTID_KEY;
+import static org.kie.baaas.dfs.api.DecisionConstants.CLIENTSECRET_KEY;
 import static org.kie.baaas.dfs.api.DecisionVersionStatus.CONDITION_BUILD;
 import static org.kie.baaas.dfs.controller.DecisionLabels.BAAAS_RESOURCE_KOGITO_SERVICE;
 import static org.kie.baaas.dfs.controller.DecisionLabels.BAAAS_RESOURCE_LABEL;
@@ -76,8 +78,6 @@ import static org.kie.baaas.dfs.service.KogitoService.BAAAS_KAFKA_CLIENTSECRET;
 import static org.kie.baaas.dfs.service.KogitoService.BAAAS_KAFKA_INCOMING_TOPIC;
 import static org.kie.baaas.dfs.service.KogitoService.BAAAS_KAFKA_OUTGOING_TOPIC;
 import static org.kie.baaas.dfs.service.KogitoService.BOOTSTRAP_SERVERS_KEY;
-import static org.kie.baaas.dfs.service.KogitoService.CLIENTID_KEY;
-import static org.kie.baaas.dfs.service.KogitoService.CLIENTSECRET_KEY;
 import static org.kie.baaas.dfs.service.KogitoService.KOGITO_RUNTIME_CONTEXT;
 import static org.kie.baaas.dfs.service.KogitoService.REPLICAS;
 import static org.kie.baaas.dfs.service.KogitoService.build;
@@ -400,7 +400,7 @@ class KogitoServiceTest extends AbstractControllerTest {
                                         .setBootstrapServers("decision-kafka-server:443")
                                         .setInputTopic("decision-input")
                                         .setOutputTopic("decision-output")
-                                        .setSecretName(KAFKA_COMMON_AUTH_SECRET))))
+                                        .setSecretName(CUSTOMER + "-kafka-auth"))))
                 .build();
         DecisionVersion version = new DecisionVersionBuilder()
                 .withMetadata(new ObjectMetaBuilder()
@@ -429,9 +429,8 @@ class KogitoServiceTest extends AbstractControllerTest {
         service.createOrUpdate(version);
 
         //Then
-        String expectedKafkaSecretName = "some-decision-1-kafka-auth";
+        String expectedKafkaSecretName = CUSTOMER + "-kafka-auth";
         assertThat(client.secrets().inNamespace(version.getMetadata().getNamespace()).withName(BAAAS_DASHBOARD_AUTH_SECRET).get(), notNullValue());
-        assertThat(client.secrets().inNamespace(version.getMetadata().getNamespace()).withName(expectedKafkaSecretName).get(), notNullValue());
         KogitoRuntime runtime = client.customResources(KogitoRuntime.class)
                 .inNamespace(version.getMetadata().getNamespace())
                 .withName(version.getMetadata().getName()).get();

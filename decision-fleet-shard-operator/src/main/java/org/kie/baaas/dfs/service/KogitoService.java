@@ -40,13 +40,14 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 
+import static org.kie.baaas.dfs.api.DecisionConstants.CLIENTID_KEY;
+import static org.kie.baaas.dfs.api.DecisionConstants.CLIENTSECRET_KEY;
 import static org.kie.baaas.dfs.api.DecisionVersionStatus.CONDITION_BUILD;
 import static org.kie.baaas.dfs.api.DecisionVersionStatus.REASON_FAILED;
 import static org.kie.baaas.dfs.controller.DecisionLabels.BAAAS_RESOURCE_KOGITO_SERVICE;
 import static org.kie.baaas.dfs.controller.DecisionLabels.BAAAS_RESOURCE_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.CUSTOMER_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_LABEL;
-import static org.kie.baaas.dfs.controller.DecisionLabels.DECISION_VERSION_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.MANAGED_BY_LABEL;
 import static org.kie.baaas.dfs.controller.DecisionLabels.OPERATOR_NAME;
 import static org.kie.baaas.dfs.service.JsonResourceUtils.buildEnvValue;
@@ -77,8 +78,6 @@ public class KogitoService {
     static final String BAAAS_KAFKA_OUTGOING_TOPIC = "BAAAS_KAFKA_OUTGOING_TOPIC";
 
     static final String BOOTSTRAP_SERVERS_KEY = "bootstrapservers";
-    static final String CLIENTID_KEY = "clientid";
-    static final String CLIENTSECRET_KEY = "clientsecret";
 
     public static final CustomResourceDefinitionContext KOGITO_RUNTIME_CONTEXT = new CustomResourceDefinitionContext.Builder()
             .withGroup("app.kiegroup.org")
@@ -124,11 +123,11 @@ public class KogitoService {
                     .add(buildEnvValueFromSecret(
                             BAAAS_KAFKA_CLIENTID,
                             CLIENTID_KEY,
-                            getKafkaSecretName(version)))
+                            version.getSpec().getKafka().getSecretName()))
                     .add(buildEnvValueFromSecret(
                             BAAAS_KAFKA_CLIENTSECRET,
                             CLIENTSECRET_KEY,
-                            getKafkaSecretName(version)))
+                            version.getSpec().getKafka().getSecretName()))
                     .add(buildEnvValue(
                             BAAAS_KAFKA_BOOTSTRAP_SERVERS,
                             version.getSpec().getKafka().getBootstrapServers()));
@@ -172,9 +171,6 @@ public class KogitoService {
         LOGGER.info("Creating or Updating Kogito Runtime for DecisionVersion {}", version.getMetadata().getName());
         JsonObject expected = build(version);
         createOrUpdateDashboardAuthSecret(version.getMetadata().getNamespace());
-        if (version.getSpec().getKafka() != null) {
-            createOrUpdateKafkaAuthSecret(version);
-        }
         String name = getName(expected);
         JsonObject current = null;
         try {
@@ -276,41 +272,6 @@ public class KogitoService {
                 && Objects.equals(decision.getSpec().getDefinition().getVersion(), version.getSpec().getVersion());
     }
 
-    private static String getKafkaSecretName(DecisionVersion version) {
-        return version.getMetadata().getName() + "-kafka-auth";
-    }
-
-    private void createOrUpdateKafkaAuthSecret(DecisionVersion version) {
-        Secret current = client.secrets()
-                .inNamespace(version.getMetadata().getNamespace())
-                .withName(getKafkaSecretName(version))
-                .get();
-        // TODO: Replace how credentials are retrieved from a secure vault. For the demo will be a pre-provisioned secret.
-        Secret vault = client.secrets()
-                .inNamespace(client.getNamespace())
-                .withName(version.getSpec().getKafka().getSecretName())
-                .get();
-        if (vault == null) {
-            LOGGER.error("Missing required kafka-auth secret {} in {}", version.getSpec().getKafka().getSecretName(), client.getNamespace());
-            return;
-        }
-        if (current == null || !Objects.equals(current.getData(), vault.getData())) {
-            Secret expected = new SecretBuilder()
-                    .withMetadata(new ObjectMetaBuilder()
-                            .withNamespace(version.getMetadata().getNamespace())
-                            .withName(getKafkaSecretName(version))
-                            .addToLabels(DECISION_VERSION_LABEL, version.getMetadata().getName())
-                            .addToLabels(DECISION_LABEL, version.getMetadata().getLabels().get(DECISION_LABEL))
-                            .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
-                            .withOwnerReferences(version.getOwnerReference())
-                            .build())
-                    .withData(vault.getData())
-                    .build();
-            LOGGER.debug("Create or replace kafka-auth secret {} in {}", expected.getMetadata().getName(), expected.getMetadata().getNamespace());
-            client.secrets().inNamespace(version.getMetadata().getNamespace()).createOrReplace(expected);
-        }
-    }
-
     private void createOrUpdateDashboardAuthSecret(String namespace) {
         Secret current = client.secrets()
                 .inNamespace(namespace)
@@ -338,4 +299,5 @@ public class KogitoService {
             client.secrets().inNamespace(namespace).createOrReplace(expected);
         }
     }
+
 }

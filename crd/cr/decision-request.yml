@@ -7,9 +7,8 @@ apiVersion: operator.baaas/v1alpha1
       - decisionrequests.operator.baaas/finalizer
   spec:
     customerId: customer1
-    definition:
-      source: s3://baaas-storage-dev/customers/customer1/example-decision/1/dmn.xml
-      version: "1"
+    source: s3://baaas-storage-dev/customers/customer1/example-decision/1/dmn.xml
+    version: "1"
     name: example-decision
     webhooks:
       - http://manager.example.com:18080/callback

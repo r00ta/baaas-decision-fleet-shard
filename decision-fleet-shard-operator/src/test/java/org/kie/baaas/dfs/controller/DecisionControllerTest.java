@@ -322,9 +322,8 @@ class DecisionControllerTest extends AbstractControllerTest {
                 .withSpec(new DecisionRequestSpec()
                         .setName("decisionName")
                         .setCustomerId(CUSTOMER)
-                        .setDefinition(new DecisionVersionSpec()
-                                .setVersion("1")
-                                .setSource(URI.create("some-source"))))
+                        .setVersion("1")
+                        .setSource(URI.create("some-source")))
                 .build();
         client.customResources(DecisionRequest.class).inNamespace(CONTROLLER_NS).create(request);
 
@@ -336,7 +335,10 @@ class DecisionControllerTest extends AbstractControllerTest {
                         .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
                         .addToLabels(CUSTOMER_LABEL, request.getSpec().getCustomerId())
                         .build())
-                .withSpec(new DecisionSpec().setDefinition(request.getSpec().getDefinition()))
+                .withSpec(new DecisionSpec()
+                        .setDefinition(new DecisionVersionSpec()
+                                .setSource(request.getSpec().getSource())
+                                .setVersion(request.getSpec().getVersion())))
                 .build();
 
         // When

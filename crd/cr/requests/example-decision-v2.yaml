@@ -5,8 +5,7 @@ metadata:
 spec:
   customerId: rromerom
   name: example-decision
-  definition:
-    version: "2"
-    source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
+  version: "2"
+  source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
   webhooks:
     - http://my-server.example.com/callback?foo

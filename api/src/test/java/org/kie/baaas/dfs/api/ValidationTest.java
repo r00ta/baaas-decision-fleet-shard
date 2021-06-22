@@ -37,13 +37,31 @@ class ValidationTest {
     @Test
     void validateDecisionRequestSpec() {
         DecisionRequestSpec spec = new DecisionRequestSpecBuilder().build();
+        assertThat(validator.validate(spec), hasSize(4));
+        spec.setSource(URI.create("http://example.com"));
         assertThat(validator.validate(spec), hasSize(3));
         spec.setCustomerId("kermit");
         assertThat(validator.validate(spec), hasSize(2));
         spec.setName("my decision");
         assertThat(validator.validate(spec), hasSize(1));
-        spec.setDefinition(new DecisionVersionSpec());
+        spec.setVersion("1.0");
+        assertThat(validator.validate(spec), empty());
+
+        spec.setKafka(new KafkaRequest());
+        assertThat(validator.validate(spec), hasSize(4));
+        spec.getKafka().setBootstrapServers("server:9002");
+        assertThat(validator.validate(spec), hasSize(3));
+        spec.getKafka().setInputTopic("topicInput");
         assertThat(validator.validate(spec), hasSize(2));
+        spec.getKafka().setOutputTopic("topicOutput");
+        assertThat(validator.validate(spec), hasSize(1));
+
+        spec.getKafka().setCredential(new KafkaCredential());
+        assertThat(validator.validate(spec), hasSize(2));
+        spec.getKafka().getCredential().setClientId("svc-001");
+        assertThat(validator.validate(spec), hasSize(1));
+        spec.getKafka().getCredential().setClientSecret("client-secret-abc");
+        assertThat(validator.validate(spec), empty());
     }
 
     @Test
@@ -60,7 +78,7 @@ class ValidationTest {
         assertThat(validator.validate(spec), hasSize(2));
         spec.getDefinition().getKafka().setBootstrapServers("my-kafka.example.com:9092");
         assertThat(validator.validate(spec), hasSize(1));
-        spec.getDefinition().getKafka().setSecretName("the-secret");
+        spec.getDefinition().getKafka().setSecretName("customer1-kafka-auth");
         assertThat(validator.validate(spec), empty());
     }
 
@@ -74,7 +92,7 @@ class ValidationTest {
         assertThat(validator.validate(spec), hasSize(2));
         spec.getKafka().setBootstrapServers("my-kafka.example.com:9092");
         assertThat(validator.validate(spec), hasSize(1));
-        spec.getKafka().setSecretName("the-secret");
+        spec.getKafka().setSecretName("customer1-kafka-auth");
         assertThat(validator.validate(spec), empty());
     }
 }

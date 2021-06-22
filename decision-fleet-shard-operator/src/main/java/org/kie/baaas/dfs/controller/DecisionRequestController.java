@@ -15,6 +15,7 @@
 package org.kie.baaas.dfs.controller;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -34,6 +35,8 @@ import org.kie.baaas.dfs.api.DecisionRequestStatusBuilder;
 import org.kie.baaas.dfs.api.DecisionSpecBuilder;
 import org.kie.baaas.dfs.api.DecisionVersion;
 import org.kie.baaas.dfs.api.DecisionVersionRef;
+import org.kie.baaas.dfs.api.DecisionVersionSpec;
+import org.kie.baaas.dfs.api.Kafka;
 import org.kie.baaas.dfs.api.Phase;
 import org.kie.baaas.dfs.client.RemoteResourceClient;
 import org.kie.baaas.dfs.model.DecisionValidationException;
@@ -43,6 +46,8 @@ import org.slf4j.LoggerFactory;
 import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.utils.KubernetesResourceUtil;
@@ -53,6 +58,8 @@ import io.javaoperatorsdk.operator.api.ResourceController;
 import io.javaoperatorsdk.operator.api.UpdateControl;
 
 import static org.kie.baaas.dfs.api.AdmissionStatus.REJECTED;
+import static org.kie.baaas.dfs.api.DecisionConstants.CLIENTID_KEY;
+import static org.kie.baaas.dfs.api.DecisionConstants.CLIENTSECRET_KEY;
 import static org.kie.baaas.dfs.api.DecisionConstants.DUPLICATED_VERSION;
 import static org.kie.baaas.dfs.api.DecisionConstants.SERVER_ERROR;
 import static org.kie.baaas.dfs.api.DecisionConstants.VALIDATION_ERROR;
@@ -70,6 +77,7 @@ public class DecisionRequestController implements ResourceController<DecisionReq
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DecisionRequestController.class);
     private static final String BAAAS_NS_TEMPLATE = "baaas-%s";
+    private static final String KAFKA_AUTH_SUFFIX = "-kafka-auth";
 
     @Inject
     KubernetesClient client;
@@ -100,9 +108,18 @@ public class DecisionRequestController implements ResourceController<DecisionReq
             return UpdateControl.updateStatusSubResource(request);
         }
         try {
+            Namespace targetNs = client.namespaces().withName(targetNamespace).get();
+            if (targetNs == null) {
+                client.namespaces()
+                        .create(new NamespaceBuilder().withNewMetadata().withName(targetNamespace).endMetadata().build());
+            }
+            if (request.getSpec().getKafka() != null) {
+                createOrUpdateKafkaAuthSecret(request);
+            }
             Decision decision = createOrUpdateDecision(request, targetNamespace);
             return updateSuccessRequestStatus(request, decision);
         } catch (KubernetesClientException e) {
+            LOGGER.error("Unable to process DecisionRequest", e);
             request.setStatus(new DecisionRequestStatusBuilder()
                     .withReason(SERVER_ERROR)
                     .withMessage(e.getMessage())
@@ -138,12 +155,12 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                 .inNamespace(namespace)
                 .withLabel(DECISION_LABEL, spec.getName())
                 .list()
-                .getItems().stream().filter(v -> Objects.equals(v.getSpec().getVersion(), spec.getDefinition().getVersion())).collect(Collectors.toList());
+                .getItems().stream().filter(v -> Objects.equals(v.getSpec().getVersion(), spec.getVersion())).collect(Collectors.toList());
         for (DecisionVersion v : versions) {
             if (REASON_FAILED.equals(v.getStatus().getBuildStatus())) {
                 throw new DecisionValidationException(VERSION_BUILD_FAILED, "Requested DecisionVersion build failed");
             }
-            if (!v.getSpec().equals(spec.getDefinition())) {
+            if (!v.getSpec().equals(toDefinition(spec))) {
                 throw new DecisionValidationException(DUPLICATED_VERSION, "The provided version already exists with a different spec");
             }
         }
@@ -154,11 +171,6 @@ public class DecisionRequestController implements ResourceController<DecisionReq
     }
 
     private Decision createOrUpdateDecision(DecisionRequest request, String namespace) {
-        Namespace targetNs = client.namespaces().withName(namespace).get();
-        if (targetNs == null) {
-            client.namespaces()
-                    .create(new NamespaceBuilder().withNewMetadata().withName(namespace).endMetadata().build());
-        }
         Decision expected = new DecisionBuilder()
                 .withMetadata(new ObjectMetaBuilder()
                         .withName(request.getSpec().getName())
@@ -168,7 +180,7 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                         .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
                         .build())
                 .withSpec(new DecisionSpecBuilder()
-                        .withDefinition(request.getSpec().getDefinition())
+                        .withDefinition(toDefinition(request.getSpec()))
                         .withWebhooks(request.getSpec().getWebhooks())
                         .build())
                 .build();
@@ -191,12 +203,59 @@ public class DecisionRequestController implements ResourceController<DecisionReq
                 .withVersionRef(new DecisionVersionRef()
                         .setName(decision.getMetadata().getName())
                         .setNamespace(decision.getMetadata().getNamespace())
-                        .setVersion(request.getSpec().getDefinition().getVersion()))
+                        .setVersion(request.getSpec().getVersion()))
                 .build();
         if (request.getStatus() == null || !expected.equals(request.getStatus())) {
             request.setStatus(expected);
             return UpdateControl.updateStatusSubResource(request);
         }
         return UpdateControl.noUpdate();
+    }
+
+    private void createOrUpdateKafkaAuthSecret(DecisionRequest request) {
+        String namespace = getTargetNamespace(request);
+        String kafkaSecretName = getKafkaSecretName(request.getSpec());
+        Secret current = client.secrets()
+                .inNamespace(namespace)
+                .withName(kafkaSecretName)
+                .get();
+
+        Secret expected = new SecretBuilder()
+                .withMetadata(new ObjectMetaBuilder()
+                        .withNamespace(namespace)
+                        .withName(kafkaSecretName)
+                        .addToLabels(CUSTOMER_LABEL, request.getSpec().getCustomerId())
+                        .addToLabels(MANAGED_BY_LABEL, OPERATOR_NAME)
+                        .build())
+                .withStringData(Map.of(
+                        CLIENTID_KEY, request.getSpec().getKafka().getCredential().getClientId(),
+                        CLIENTSECRET_KEY, request.getSpec().getKafka().getCredential().getClientSecret()))
+                .build();
+        if (current == null || !Objects.equals(current.getStringData(), expected.getStringData())) {
+            LOGGER.debug("Create or replace kafka-auth secret {} in {}", expected.getMetadata().getName(), expected.getMetadata().getNamespace());
+            client.secrets().inNamespace(namespace).createOrReplace(expected);
+        }
+    }
+
+    static DecisionVersionSpec toDefinition(DecisionRequestSpec reqSpec) {
+        if (reqSpec == null) {
+            return null;
+        }
+        DecisionVersionSpec spec = new DecisionVersionSpec()
+                .setSource(reqSpec.getSource())
+                .setVersion(reqSpec.getVersion())
+                .setEnv(reqSpec.getEnv());
+        if (reqSpec.getKafka() != null) {
+            spec.setKafka(new Kafka()
+                    .setBootstrapServers(reqSpec.getKafka().getBootstrapServers())
+                    .setInputTopic(reqSpec.getKafka().getInputTopic())
+                    .setOutputTopic(reqSpec.getKafka().getOutputTopic())
+                    .setSecretName(getKafkaSecretName(reqSpec)));
+        }
+        return spec;
+    }
+
+    private static String getKafkaSecretName(DecisionRequestSpec request) {
+        return request.getCustomerId() + KAFKA_AUTH_SUFFIX;
     }
 }

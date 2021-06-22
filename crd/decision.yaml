@@ -59,6 +59,8 @@ spec:
                       required:
                         - bootstrapServers
                         - secretName
+                        - inputTopic
+                        - outputTopic
                       properties:
                         bootstrapServers:
                           type: string

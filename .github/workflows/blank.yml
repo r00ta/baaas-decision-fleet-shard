@@ -16,8 +16,8 @@ jobs:
       - name: Set up GraalVM
         uses: DeLaGuardo/setup-graalvm@4.0
         with:
-          graalvm: 21.0.0.2
-          java: 11
+          graalvm: '21.0.0.2'
+          java: 'java11'
       - uses: actions/checkout@v2
       - name: Run test suite with openshift 
         run:  mvn test -Dbaaas.k8s.platform=openshift

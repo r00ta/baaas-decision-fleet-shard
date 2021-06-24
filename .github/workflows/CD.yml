@@ -1,0 +1,38 @@
+name: CD
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+  OUTPUT_CONTAINER_NAME: "quay.io/rblake/baaas-master-control-plane:$GITHUB_SHA"
+
+jobs:
+  build_and_push_containers:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Set up GraalVM
+        uses: DeLaGuardo/setup-graalvm@4.0
+        with:
+          graalvm: 21.0.0.2
+          java: 11
+      - uses: actions/checkout@v2
+      - name: Compile native
+        run:  mvn clean package -Dmaven.test.skip=true -Pvalidate-formatting,native,github
+      - name: Deploy jars
+        run:  mvn deploy -Dmaven.test.skip=true -Dcheckstyle.skip
+      - name: build and push jvm container
+        run: |
+          echo "$CONTAINER_REGISTRY_PASSWORD" | docker login quay.io --username $CONTAINER_REGISTRY_USER --password-stdin
+          docker build -f decision-fleet-shard-operator/src/main/docker/Dockerfile.jvm -t $OUTPUT_CONTAINER_NAME-jvm decision-fleet-shard-operator/
+          docker push $OUTPUT_CONTAINER_NAME-jvm  
+          docker image rm -f $OUTPUT_CONTAINER_NAME-jvm
+      - name: build and push native container
+        run: |
+          echo "$CONTAINER_REGISTRY_PASSWORD" | docker login quay.io --username $CONTAINER_REGISTRY_USER --password-stdin
+          docker build -f decision-fleet-shard-operator/src/main/docker/Dockerfile.native -t $OUTPUT_CONTAINER_NAME decision-fleet-shard-operator/
+          docker push $OUTPUT_CONTAINER_NAME 
+          docker image rm -f $OUTPUT_CONTAINER_NAME
+      

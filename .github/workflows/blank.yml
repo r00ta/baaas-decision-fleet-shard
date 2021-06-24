@@ -52,7 +52,7 @@ jobs:
         uses: DeLaGuardo/setup-graalvm@4.0
         with:
           graalvm:: '21.0.0.2'
-          java: 11
+          java: 'java11'
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       # Runs a set of commands using the runners shell

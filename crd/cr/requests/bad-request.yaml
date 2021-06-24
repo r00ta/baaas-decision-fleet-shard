@@ -1,0 +1,12 @@
+apiVersion: operator.baaas/v1alpha1
+kind: DecisionRequest
+metadata:
+  name: bad-decision-request
+spec:
+  name: Traffic-Violation
+  customerId: kermit
+  definition:
+    version: "1"
+    source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
+  webhooks:
+    - http://localhost:18080/callback

@@ -1,0 +1,107 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    app.quarkus.io/vcs-url: https://gitlab.cee.redhat.com/jrota/baaas-cluster-control-plane.git
+    app.quarkus.io/build-timestamp: 2021-06-23 - 06:58:47 +0000
+    app.quarkus.io/commit-id: 0ff7923151ceca3f000de9896360816b28718c6b
+  labels:
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.kubernetes.io/name: baaas-decision-fleet-shard-operator
+  name: baaas-decision-fleet-shard-operator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    app.quarkus.io/vcs-url: https://gitlab.cee.redhat.com/jrota/baaas-cluster-control-plane.git
+    app.quarkus.io/build-timestamp: 2021-06-23 - 06:58:47 +0000
+    app.quarkus.io/commit-id: 0ff7923151ceca3f000de9896360816b28718c6b
+  labels:
+    app.kubernetes.io/name: baaas-decision-fleet-shard-operator
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+  name: baaas-decision-fleet-shard-operator
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    app.kubernetes.io/name: baaas-decision-fleet-shard-operator
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+  type: ClusterIP
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: baaas-decision-fleet-shard-operator-view
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: view
+subjects:
+- kind: ServiceAccount
+  name: baaas-decision-fleet-shard-operator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    app.quarkus.io/vcs-url: https://gitlab.cee.redhat.com/jrota/baaas-cluster-control-plane.git
+    app.quarkus.io/build-timestamp: 2021-06-23 - 06:58:47 +0000
+    app.quarkus.io/commit-id: 0ff7923151ceca3f000de9896360816b28718c6b
+  labels:
+    app.kubernetes.io/version: 1.0-SNAPSHOT
+    app.kubernetes.io/name: baaas-decision-fleet-shard-operator
+  name: baaas-decision-fleet-shard-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/version: 1.0-SNAPSHOT
+      app.kubernetes.io/name: baaas-decision-fleet-shard-operator
+  template:
+    metadata:
+      annotations:
+        app.quarkus.io/vcs-url: https://gitlab.cee.redhat.com/jrota/baaas-cluster-control-plane.git
+        app.quarkus.io/build-timestamp: 2021-06-23 - 06:58:47 +0000
+        app.quarkus.io/commit-id: 0ff7923151ceca3f000de9896360816b28718c6b
+      labels:
+        app.kubernetes.io/version: 1.0-SNAPSHOT
+        app.kubernetes.io/name: baaas-decision-fleet-shard-operator
+    spec:
+      containers:
+      - env:
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: jrota/baaas-decision-fleet-shard-operator:1.0-SNAPSHOT
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /q/health/live
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10
+        name: baaas-decision-fleet-shard-operator
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /q/health/ready
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10
+      serviceAccount: baaas-decision-fleet-shard-operator

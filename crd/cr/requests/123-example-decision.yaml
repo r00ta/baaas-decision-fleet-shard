@@ -1,0 +1,12 @@
+apiVersion: operator.baaas/v1alpha1
+kind: DecisionRequest
+metadata:
+  name: 123-example-decision-request
+spec:
+  customerId: 123
+  name: example-decision
+  definition:
+    version: "1"
+    source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
+  webhooks:
+    - http://my-server.example.com/callback?foo

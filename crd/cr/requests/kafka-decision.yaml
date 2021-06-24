@@ -1,0 +1,18 @@
+apiVersion: operator.baaas/v1alpha1
+kind: DecisionRequest
+metadata:
+  name: kafka-decision
+spec:
+  customerId: rromerom
+  name: kafka-decision
+  version: "1"
+  source: 's3://baaas-storage-dev/customers/example/example-decision/1/dmn.xml'
+  kafka:
+    bootstrapServers: kafka-cluster.baaas-kafka:9093
+    credentials:
+      clientId: svc-acc-001
+      clientSecret: supersecret
+    inputTopic: theinput
+    outputTopic: theoutput
+  webhooks:
+    - http://localhost:18080/callback

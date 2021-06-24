@@ -1,0 +1,19 @@
+---
+root: file:///home/jrota/vagrant/bionic64/baaas-cluster-control-plane/api/
+dekorateInputDir: null
+dekorateOutputDir: META-INF/dekorate
+dekorateMetaDir: ../.dekorate
+buildInfo:
+  name: baaas-decision-fleet-shard-api
+  version: 1.0-SNAPSHOT
+  packaging: jar
+  buildTool: maven
+  buildToolVersion: 3.6.3
+  outputFile: file:///home/jrota/vagrant/bionic64/baaas-cluster-control-plane/api/target/baaas-decision-fleet-shard-api-1.0-SNAPSHOT.jar
+  classOutputDir: file:///home/jrota/vagrant/bionic64/baaas-cluster-control-plane/api/target/classes/
+  resourceDir: file:///home/jrota/vagrant/bionic64/baaas-cluster-control-plane/api/src/main/resources
+scmInfo:
+  root: file:///home/jrota/vagrant/bionic64/baaas-cluster-control-plane/
+  url: https://gitlab.cee.redhat.com/jrota/baaas-cluster-control-plane.git
+  branch: main
+  commit: 0ff7923151ceca3f000de9896360816b28718c6b

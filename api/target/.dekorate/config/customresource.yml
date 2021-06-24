@@ -1,0 +1,16 @@
+---
+project: null
+group: operator.baaas
+kind: DecisionRequest
+name: "decision,request"
+plural: decisionrequests
+shortName: dr
+version: v1alpha1
+served: true
+storage: false
+scope: Namespaced
+scale:
+  specReplicasPath: null
+  statusReplicasPath: null
+  labelSelectorPath: null
+statusClassName: io.dekorate.crd.annotation.Autodetect

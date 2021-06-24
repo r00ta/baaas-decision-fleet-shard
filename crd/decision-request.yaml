@@ -1,0 +1,94 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: decisionrequests.operator.baaas
+spec:
+  group: operator.baaas
+  names:
+    kind: DecisionRequest
+    listKind: DecisionRequestList
+    plural: decisionrequests
+    singular: decisionrequest
+    categories:
+      - all
+      - baaas
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Admission
+          type: string
+          description: Admission status
+          jsonPath: .status.state
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            status:
+              type: object
+              properties:
+                versionRef:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    version:
+                      type: string
+                state:
+                  type: string
+                reason:
+                  type: string
+                message:
+                  type: string
+            spec:
+              type: object
+              required:
+                - customerId
+                - name
+                - version
+                - source
+              properties:
+                customerId:
+                  type: string
+                name:
+                  type: string
+                version:
+                  type: string
+                source:
+                  type: string
+                kafka:
+                  type: object
+                  required:
+                    - bootstrapServers
+                    - credential
+                    - inputTopic
+                    - outputTopic
+                  properties:
+                    bootstrapServers:
+                      type: string
+                    credential:
+                      type: object
+                      required:
+                        - clientId
+                        - clientSecret
+                      properties:
+                        clientId:
+                          type: string
+                        clientSecret:
+                          type: string
+                    inputTopic:
+                      type: string
+                    outputTopic:
+                      type: string
+                env:
+                  type: object
+                webhooks:
+                  type: array
+                  items:
+                    type: string

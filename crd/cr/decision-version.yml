@@ -1,0 +1,39 @@
+apiVersion: operator.baaas/v1alpha1
+kind: DecisionVersion
+metadata:
+  name: example-decision-1
+  namespace: baaas-customer1
+  finalizers:
+    - decisionversions.operator.baaas/finalizer
+  labels:
+    app.kubernetes.io/managed-by: decision-fleet-shard-operator
+    org.kie.baaas/customer: customer1
+    org.kie.baaas/decision: example-decision
+  ownerReferences:
+    - apiVersion: operator.baaas/v1alpha1
+      controller: true
+      kind: Decision
+      name: example-decision
+      uid: 771ac62e-ad99-4cec-afe8-c71d55cd05ea
+spec:
+  source: s3://baaas-storage-dev/customers/customer1/example-decision/1/dmn.xml
+  version: "1"
+status:
+  conditions:
+    - lastTransitionTime: Thu May 06 15:20:39 CEST 2021
+      reason: Success
+      status: "True"
+      type: Ready
+    - lastTransitionTime: Thu May 06 15:20:15 CEST 2021
+      message: ""
+      reason: Success
+      status: "True"
+      type: Build
+    - lastTransitionTime: Thu May 06 15:20:39 CEST 2021
+      message: ""
+      reason: Deployed
+      status: "True"
+      type: Service
+  imageRef: quay.io/ruben/baaas-decision-builds:baaas-customer1-example-decision-1
+  kogitoServiceRef: example-decision
+  pipelineRef: customer1-example-decision-1

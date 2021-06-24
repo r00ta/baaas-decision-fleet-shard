@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decision-fleet-shard
+spec:
+  selector:
+    matchLabels:
+      app: decision-fleet-shard
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: decision-fleet-shard
+    spec:
+      serviceAccountName: decision-fleet-shard
+      containers:
+        - image: quay.io/ruben/baaas-decision-fleet-shard:latest
+          imagePullPolicy: Always
+          name: decision-fleet-shard

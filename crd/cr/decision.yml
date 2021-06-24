@@ -1,0 +1,20 @@
+apiVersion: operator.baaas/v1alpha1
+kind: Decision
+metadata:
+  name: example-decision
+  namespace: baaas-customer1
+  finalizers:
+    - decisions.operator.baaas/finalizer
+  labels:
+    app.kubernetes.io/managed-by: decision-fleet-shard-operator
+    org.kie.baaas/customer: customer1
+    org.kie.baaas/decisionrequest: example-decision-request
+spec:
+  definition:
+    source: s3://baaas-storage-dev/customers/customer1/example-decision/1/dmn.xml
+    version: "1"
+  webhooks:
+    - http://localhost:18080/callback
+status:
+  endpoint: http://example-decision-baaas-customer1.apps.mw-ocp4.cloud.lab.eng.bos.redhat.com
+  versionId: "1"

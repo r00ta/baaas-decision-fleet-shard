@@ -1,0 +1,20 @@
+apiVersion: operator.baaas/v1alpha1
+  kind: DecisionRequest
+  metadata:
+    name: example-decision-request
+    namespace: baaas-dfs-demo
+    finalizers:
+      - decisionrequests.operator.baaas/finalizer
+  spec:
+    customerId: customer1
+    source: s3://baaas-storage-dev/customers/customer1/example-decision/1/dmn.xml
+    version: "1"
+    name: example-decision
+    webhooks:
+      - http://manager.example.com:18080/callback
+  status:
+    state: SUCCESS
+    versionRef:
+      name: example-decision
+      namespace: baaas-customer1
+      version: "1"

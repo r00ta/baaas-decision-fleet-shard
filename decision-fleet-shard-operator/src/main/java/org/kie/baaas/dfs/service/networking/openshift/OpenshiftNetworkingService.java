@@ -17,6 +17,7 @@ package org.kie.baaas.dfs.service.networking.openshift;
 import org.kie.baaas.dfs.api.DecisionVersion;
 import org.kie.baaas.dfs.controller.openshift.OpenshiftResourceEventSource;
 import org.kie.baaas.dfs.model.NetworkResource;
+import org.kie.baaas.dfs.service.networking.NetworkingConstants;
 import org.kie.baaas.dfs.service.networking.NetworkingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,6 +116,8 @@ public class OpenshiftNetworkingService implements NetworkingService {
     private NetworkResource buildNetworkingResource(Route route) {
         if ("Admitted".equals(route.getStatus().getIngress().get(0).getConditions().get(0).getType())) {
             String endpoint = route.getSpec().getHost();
+            endpoint = route.getSpec().getTls() != null ? NetworkingConstants.HTTPS_SCHEME + endpoint : NetworkingConstants.HTTP_SCHEME + endpoint;
+
             String kogitoServiceRef = route.getSpec().getTo().getName();
             return new NetworkResource(endpoint, kogitoServiceRef);
         }

@@ -56,7 +56,7 @@ public class OpenshiftTestUtils implements NetworkingTestUtils {
                 .build();
 
         RouteSpec routeSpec = new RouteSpecBuilder()
-                .withHost(NetworkingTestConstants.HTTP_HOST + endpointName)
+                .withHost(NetworkingTestConstants.HOST + "/" + endpointName)
                 .withTo(routeTargetReference)
                 .build();
 

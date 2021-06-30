@@ -17,6 +17,7 @@ package org.kie.baaas.dfs.service.networking.k8s;
 import org.kie.baaas.dfs.api.DecisionVersion;
 import org.kie.baaas.dfs.controller.k8s.IngressResourceEventSource;
 import org.kie.baaas.dfs.model.NetworkResource;
+import org.kie.baaas.dfs.service.networking.NetworkingConstants;
 import org.kie.baaas.dfs.service.networking.NetworkingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,7 +144,7 @@ public class KubernetesNetworkingService implements NetworkingService {
             return null;
         }
         String host = ingress.getStatus().getLoadBalancer().getIngress().get(0).getIp();
-        String endpoint = "http://" + host + ingress.getSpec().getRules().get(0).getHttp().getPaths().get(0).getPath().replace(PATH_REGEX, "");
+        String endpoint = NetworkingConstants.HTTP_SCHEME + host + ingress.getSpec().getRules().get(0).getHttp().getPaths().get(0).getPath().replace(PATH_REGEX, "");
         String kogitoServiceRef = ingress.getSpec().getRules().get(0).getHttp().getPaths().get(0).getBackend().getService().getName();
         return new NetworkResource(endpoint, kogitoServiceRef);
     }

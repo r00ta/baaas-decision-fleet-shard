@@ -45,6 +45,8 @@ spec:
                   type: string
                 kogitoServiceRef:
                   type: string
+                endpoint:
+                  type: string
                 conditions:
                   type: array
                   items:

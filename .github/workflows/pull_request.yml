@@ -1,0 +1,57 @@
+name: Decision Fleet Shard
+on: [pull_request]
+jobs:
+  decision-fleetshard-build:
+    env:
+      MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+      MAVEN_CLI_OPTS: -s ${{ github.workspace }}/.ci/settings.xml --batch-mode
+    concurrency:
+      group: baaas-dfs-pr-${{ github.head_ref }}
+      cancel-in-progress: true
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    name: Build and Test
+    steps:
+      - name: Set up GraalVM
+        uses: DeLaGuardo/setup-graalvm@4.0
+        with:
+          graalvm: '20.3.2'
+          java: 'java11'
+      - name: Install native-image Binary
+        shell: bash
+        run: gu install native-image
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Cache Maven Packages
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+      - name: Compile and Validate Formating
+        shell: bash
+        run: mvn package -Dmaven.test.skip=true -Pvalidate-formatting
+      - name: Run Test Suite (Openshift Compatibility)
+        shell: bash
+        run: mvn test -Dbaaas.k8s.platform=openshift
+      - name: Publish Test Report (Openshift Compatibility)
+        if: ${{ always() }}
+        uses: scacap/action-surefire-report@v1.0.5
+        with:
+          check_name: Test Results (Openshift Compatibility)
+          fail_on_test_failures: true
+          fail_if_no_tests: false
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Test Suite (Kubernetes Compatibility)
+        shell: bash
+        run: mvn test -Dbaaas.k8s.platform=k8s
+      - name: Publish Test Report (Kubernetes Compatibility)
+        if: ${{ always() }}
+        uses: scacap/action-surefire-report@v1.0.5
+        with:
+          check_name: Test Results (Kubernetes Compatibility)
+          fail_on_test_failures: true
+          fail_if_no_tests: false
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify Native Compile
+        shell: bash
+        run: mvn package -Pnative -Dmaven.test.skip=true
